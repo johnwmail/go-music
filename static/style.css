@@ -1,0 +1,391 @@
+/* info: fix to have iOS render outside view-area */
+body *
+{
+	-webkit-transform:translate3d(0,0,0);
+}
+
+body
+{
+	font-size:5vw;
+	color:#000000;
+	font-family: Arial,Helvetica Neue,Helvetica,sans-serif;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	-webkit-overflow-scrolling:touch;
+	background:#dddddd;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+smallPath
+{
+	position:relative;
+	top: -0.8em;
+	font-size:60%;
+	color:#555555;
+}
+
+.third
+{
+	width:25vw;
+	text-align:center;
+}
+
+.inp
+{
+	width:38vw;
+	border:none;
+	font-size:90%;
+	background:#dddddd;
+	margin:0.2em 0.3em 0 0;
+	border-radius:0.1em;
+}
+
+.hideout
+{
+	position:absolute;
+	left:0em;
+	top:0em;
+	visibility:hidden;
+}
+
+.fixedMenu
+{
+	position:fixed;
+	top:0em;
+	left:0em;
+	width:100%;
+	height:8.3em;
+	text-align:left;
+	padding:0em;
+	background:#dddddd;
+	z-index:100;
+}
+
+.timeBox
+{
+	text-align:center;
+	display:inline-block;
+	width:30%;
+	background:#eeeeee;
+	border-radius:0.1em;
+	margin:0.4em 1% 0.45em 2%;
+}
+
+.bar
+{
+	width:100%;
+	height:1.65em;
+	padding:0em 0em 0em 0.25em;
+	margin:0em;
+    box-sizing: border-box;
+}
+
+.barOn,.barOff,.barGrey
+{
+	border-radius:0.1em;
+	cursor:pointer;
+	display:inline-block;
+	background:#000000;
+	border:none;
+	width:1.2em;
+	height:1.2em;
+	margin:0% 0% 0% 0.9%;
+}
+
+.barOn
+{
+	background:#ffffff;
+}
+
+.barGrey
+{
+	background:#808080;
+}
+
+.trackName
+{
+	cursor:pointer;
+	width:96%;
+	height:2em;
+	text-align:center;
+	white-space:nowrap;
+	overflow:auto;
+	overflow-y:hidden;
+	background:#eeeeee;
+	border-radius:0.1em;
+	display:inline-block;
+	margin:0em 0em 0.5em 0.4em;
+	vertical-align:top;
+}
+
+.tabBack
+{
+	background:#dddddd;
+	text-align:center;
+	position:fixed;
+	top:8.3em;
+	left:0em;
+	width:100%;
+	height:1.9em;
+	z-index:50;
+}
+
+.tabBrowser,.tabPlaylist,.tabSearch
+{
+	text-align:center;
+	cursor:pointer;
+	position:absolute;
+	bottom:0em;
+	left:2%;
+	width:30.66%;
+	height:1.5em;
+	border-radius:0.3em 0.3em 0em 0em;
+}
+
+.tabPlaylist
+{
+	left:34.66%;
+}
+
+.tabSearch
+{
+	left:67.33%;
+}
+
+.tabFrame,.tabFrameBack
+{
+	overflow:hidden;
+	overflow-y:auto;
+	position:absolute;
+	top:10.45em;
+	left:0em;
+	bottom:0em;
+	width:100%;
+	background:#ffffff;
+	z-index:10;
+}
+
+.tabFrameBack
+{
+	border-radius:0.1em;
+	overflow:hidden;
+	top:10.2em;
+	z-index:0;
+	position:fixed;
+}
+
+.listContainer,.pathContainer
+{
+	overflow:hidden;
+	white-space:nowrap;
+	width:98%;
+	height:2em;
+	margin:0em 0em 0.2em 0.2em;
+}
+
+.pathContainer
+{
+	overflow:auto;
+	overflow-y:hidden;
+}
+
+.browserPath,.browserDir,.browserTitle,.browserTitleHL,.browserAction
+{
+	cursor:pointer;
+	vertical-align:top;
+	border-radius:0.1em;
+	overflow:hidden;
+	white-space:nowrap;
+	display:inline-block;
+	background:#aaaaaa;
+	height:100%;
+	margin:0% 1% 0% 0%;
+}
+
+.browserPath
+{
+	background:#bbbbbb;
+}
+
+.browserDir
+{
+	background:#bbbbbb;
+	width:100%;
+	overflow:auto;
+	overflow-y:hidden;
+}
+
+.browserTitle,.browserTitleHL
+{
+	width:89%;
+	overflow:auto;
+	overflow-y:hidden;
+}
+
+.browserTitleHL
+{
+	background:#dddddd;
+}
+
+.browserAction
+{
+	width:10%;
+}
+
+.mark
+{
+	position:relative;
+	left:0.5em;
+	top:0.2em;
+}
+
+.markPlay
+{
+	visibility:hidden;
+	position:absolute;
+	font-size:50%;
+	left:0.4em;
+	top:0.3em;
+}
+
+.markLoad
+{
+	visibility:hidden;
+	position:absolute;
+	font-size:100%;
+	right:0.3em;
+	top:-0.15em;
+	animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker
+{
+	50% {opacity: 0.0;}
+}
+
+.button,.shuffleOn,.shuffleOff
+{
+	display:inline-block;
+	overflow:hidden;
+	font-size:150%;
+	height:1.35em;
+	width:19.5%;
+	cursor:pointer;
+	background:#aaaaaa;
+	border:none;
+	border-radius:0.1em;
+	text-align:center;
+	padding:0;
+	margin:0 0 0.3em 2%;
+}
+
+.shuffleOn,.shuffleOff
+{
+	width:10%;
+}
+
+.shuffleOn
+{
+	background:#ffffff;
+}
+
+alignPlay
+{
+	line-height: 1.3;
+}
+
+alignJumpPause
+{
+	font-size:90%;
+}
+
+alignShuffle
+{
+	font-size:70%;
+	letter-spacing:-0.4em;
+	margin:0 0.3em 0 0;
+}
+
+alignJumpTrack
+{
+	font-size:70%;
+	letter-spacing:-0.3em;
+	margin:0 0.3em 0 0;
+}
+
+.shuffleOn,.shuffleOff
+{
+	display:inline-block;
+}
+
+.collection
+{
+	display:inline-block;
+	overflow:hidden;
+	width:96%;
+	background:#cccccc;
+	border:none;
+	border-radius:0.1em;
+	text-align:center;
+	padding:0.7em 0 0 0;
+	margin:0 0 0.3em 2%;
+}
+
+.landscape
+{
+	visibility:hidden;
+}
+
+@media all and (orientation:landscape)
+{
+	body
+	{
+		font-size:2.5vw;
+	}
+
+	.landscape
+	{
+		visibility:visible;
+	}
+
+	.fixedMenu
+	{
+		width:50%;
+	}
+
+	.tabFrame,.tabFrameBack
+	{
+		top:1.9em;
+		left:50%;
+		bottom:0em;
+		width:50%;
+	}
+
+	.tabFrame
+	{
+		top:2.15em;
+	}
+
+	.tabBack
+	{
+		top:0em;
+		left:50%;
+		width:50%;
+	}
+
+	.third
+	{
+		width:12.5vw;
+	}
+
+	.inp
+	{
+		width:19vw;
+	}
+}

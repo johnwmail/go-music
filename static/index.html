@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Music Player</title>
+	<meta name="viewport" content="width=device-width,initial-scale=1,minimal-ui">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<link rel="stylesheet" href="/static/style.css">
+</head>
+<body onload="init()">
+	<audio class="hideout" autoplay id="player" preload="auto" tabindex="0"></audio>
+	<div class="hideout"><form id="dfform" target="dataframe" action="/api" method="post"><input type="hidden" name="dffunc" id="dffunc" value=""><input type="hidden" name="dfdata" id="dfdata" value=""></form><iframe src="about:blank" height="0" width="0" name="dataframe"></iframe></div>
+	<div class="fixedMenu"><div class="timeBox" id="trackCurrentTime"></div><div class="timeBox" id="trackRemaining"></div><div class="timeBox" id="trackDuration"></div><div id="bar" class="bar"></div><div id="trackName" class="trackName" onClick="getPlayingDir()">&nbsp;</div><div class="button" onClick="(player.paused?player.play():player.pause())" id="buttonPlay"><alignPlay>&#9658;</alignPlay></div><div class="button" onClick="playerStop()" id="buttonStop">&#9632;</div><div class="button" onClick="changeTrack(-1);player.play()"><alignJumpTrack>&#9668;&#9668;</alignJumpTrack></div><div class="button" onClick="changeTrack(1);player.play()"><alignJumpTrack>&#9658;&#9658;</alignJumpTrack></div><div id="shuffle" class="shuffleOff" onClick="shuffleToggle()"><alignShuffle>&#128256;&#xfe0e;</alignShuffle></div><div class="landscape"><div class="collection"><div class="button" onclick="skipSec(5)">+5</div><div class="button" onclick="skipSec(10)">+10</div><div class="button" onclick="skipSec(30)">+30</div><div class="button" onclick="skipSec(60)">+60</div><div class="button" onclick="skipSec(-5)">-5</div><div class="button" onclick="skipSec(-10)">-10</div><div class="button" onclick="skipSec(-30)">-30</div><div class="button" onclick="skipSec(-60)">-60</div></div></div></div>
+	<div class="tabBack"><div class="tabBrowser" id="tabBrowser" onClick="showTab(1)"><div id="markBrowser" class="markPlay"><alignPlay>&#9658;</alignPlay></div><div id="markLoadBrowser" class="markLoad">&bull;</div>Browser</div><div class="tabPlaylist" id="tabPlaylist" onClick="showTab(2)"><div id="markList" class="markPlay"><alignPlay>&#9658;</alignPlay></div>Playlist</div><div class="tabSearch" id="tabSearch" onClick="showTab(3)"><div id="markSearch" class="markPlay"><alignPlay>&#9658;</alignPlay></div><div id="markLoadSearch" class="markLoad">&bull;</div>Search</div></div>
+	<div class="tabFrameBack"></div>
+	<div id="frameBrowser" class="tabFrame"></div>
+	<div id="framePlaylist" class="tabFrame"></div>
+	<div id="frameSearch" class="tabFrame"></div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
+

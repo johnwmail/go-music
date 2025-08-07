@@ -1,0 +1,40 @@
+name: Build and Deploy to Lambda
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+      GOOS: linux
+      GOARCH: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build Go App
+        run: |
+          go build \
+            -ldflags "-X main.buildTime=$(date --utc +%Y-%m-%dT%H:%M:%SZ) -X main.commitHash=${{ github.sha }} -X main.version=${{ github.ref_name }}" \
+            -o ./bootstrap ./...
+
+      - name: Deploy to Lambda
+        uses: appleboy/lambda-action@v0.2.0
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_DEPLOY_LAMBDA }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEPLOY_LAMBDA }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          function_name: ${{ vars.LAMBDA_FUNCTION_NAME }}
+          architectures: arm64
+          source: ./bootstrap,./static
+          environment: BUCKET=${{ vars.BUCKET }},S3_PREFIX=${{ vars.S3_PREFIX }}
+          #debug: true
