@@ -1,6 +1,6 @@
 services:
   go-music:
-    image: local/go-music:latest
+    image: go-music:latest
     container_name: go-music
     restart: unless-stopped
     read_only: true

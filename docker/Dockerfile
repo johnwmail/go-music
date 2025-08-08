@@ -1,6 +1,6 @@
 # Build stage
 
-FROM golang:1.24 as builder
+FROM golang:1.24 AS builder
 WORKDIR /app
 COPY . .
 # Use build args for multi-arch support
