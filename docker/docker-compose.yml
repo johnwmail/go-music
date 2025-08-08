@@ -1,0 +1,22 @@
+services:
+  go-music:
+    image: local/go-music:latest
+    container_name: go-music
+    restart: unless-stopped
+    read_only: true
+    mem_limit: 128mb
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges
+    cap_drop:
+      - all
+    ports:
+      - "0.0.0.0:8080:8080"
+    user: "8080:8080"
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_PREFIX=${S3_PREFIX}
+      - BUCKET=${BUCKET}
+      - GIN_MODE=release

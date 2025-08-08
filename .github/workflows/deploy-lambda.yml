@@ -2,8 +2,8 @@ name: Build and Deploy to Lambda
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - deploy/lambda
 
 jobs:
   build-and-deploy:
@@ -25,6 +25,7 @@ jobs:
         run: |
           go build \
             -ldflags "-X main.buildTime=$(date --utc +%Y-%m-%dT%H:%M:%SZ) -X main.commitHash=${{ github.sha }} -X main.version=${{ github.ref_name }}" \
+            -tags netgo -trimpath \
             -o ./bootstrap ./...
 
       - name: Deploy to Lambda

@@ -5,9 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -92,7 +90,9 @@ func main() {
 		lambda.Start(Handler)
 	} else {
 		log.Println("Running local server on :8080")
-		r.Run(":8080")
+		if err := r.Run(":8080"); err != nil {
+			log.Fatalf("Gin server error: %v", err)
+		}
 	}
 }
 
@@ -189,45 +189,6 @@ func handleRequest(c *gin.Context) {
 }
 
 // --- S3 Helper Functions ---
-
-func s3GetAudioFile(key string) (io.ReadCloser, int64, string, error) {
-	input := &s3.GetObjectInput{
-		Bucket: aws.String(s3Bucket),
-		Key:    aws.String(s3Prefix + key),
-	}
-	resp, err := s3Client.GetObject(context.Background(), input)
-	if err != nil {
-		return nil, 0, "", err
-	}
-	var size int64 = 0
-	if resp.ContentLength != nil {
-		size = *resp.ContentLength
-	}
-
-	contentType := aws.ToString(resp.ContentType)
-	// Patch: Always set correct audio content type for known extensions
-	ext := strings.ToLower(filepath.Ext(key))
-	switch ext {
-	case ".mp3":
-		contentType = "audio/mpeg"
-	case ".wav":
-		contentType = "audio/wav"
-	case ".ogg":
-		contentType = "audio/ogg"
-	case ".mp4":
-		contentType = "audio/mp4"
-	}
-	if contentType == "" || contentType == "application/octet-stream" {
-		mimeType := mime.TypeByExtension(ext)
-		if mimeType != "" {
-			contentType = mimeType
-		} else {
-			contentType = "application/octet-stream"
-		}
-	}
-
-	return resp.Body, size, contentType, nil
-}
 
 func s3ListAllAudioFiles(prefix string) ([]string, error) {
 	var allFiles []string
