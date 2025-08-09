@@ -34,3 +34,5 @@ go.work.sum
 go-music
 bootstrap
 *.zip
+mp3/
+music/
