@@ -396,53 +396,11 @@ func handleGetAllMp3InDirs(c *gin.Context, data string) {
 	}
 	sort.Strings(finalFiles)
 	echoReqHtml(c, []interface{}{"ok", finalFiles}, "getAllMp3Data")
+	// FIX: Add missing closing bracket for function
 }
-
-type responseWriter struct {
-	gin.ResponseWriter
-	buffer *bytes.Buffer
-	rw.buffer.Write(b)
-	return rw.ResponseWriter.Write(b)
-	log.Printf("Response to %s %s: %s", c.Request.Method, c.Request.URL.Path, response)
-	return func(c *gin.Context) {
-		var responseBuffer bytes.Buffer
-		writer := &responseWriter{ResponseWriter: c.Writer, buffer: &responseBuffer}
-		c.Writer = writer
-		c.Next()
-		if c.Writer.Status() >= 400 {
-			logResponse(c, responseBuffer.String())
-		}
-	}
-	ext := strings.ToLower(filepath.Ext(filename))
-	for _, audioExt := range audioExtensions {
-		if ext == "."+audioExt {
-			return true
-		}
-	}
-	return false
-	c.Header("Content-Type", "text/html; charset="+CHARSET)
-	c.String(http.StatusOK, `<!DOCTYPE html><html><head><meta charset="UTF-8"><script>var dataContainer = `+ea(data)+`;</script></head><body onload="parent.`+funcName+`(dataContainer)"></body></html>`)
-	res := ""
-	for i, v := range varData {
-		if i > 0 {
-			res += ","
-		}
-		if arr, ok := v.([]string); ok {
-			var quotedItems []string
-			for _, item := range arr {
-				quotedItems = append(quotedItems, `"`+strings.ReplaceAll(item, `"`, `\\"`)+`"`)
-			}
-			res += "[" + strings.Join(quotedItems, ",") + "]"
-		} else {
-			res += `"` + strings.ReplaceAll(fmt.Sprint(v), `"`, `\\"`) + `"`
-		}
-	}
-	return "[" + res + "]"
-
 
 // --- Utility Functions ---
 
-// ResponseWriter for logging responses
 type responseWriter struct {
 	gin.ResponseWriter
 	buffer *bytes.Buffer
@@ -469,7 +427,6 @@ func ResponseLogger() gin.HandlerFunc {
 	}
 }
 
-// Check if file is an audio file
 func isAudioFile(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
 	for _, audioExt := range audioExtensions {
@@ -480,13 +437,11 @@ func isAudioFile(filename string) bool {
 	return false
 }
 
-// Echo HTML response for frontend callback
 func echoReqHtml(c *gin.Context, data []interface{}, funcName string) {
-	c.Header("Content-Type", "text/html; charset=""+CHARSET)
+	c.Header("Content-Type", "text/html; charset="+CHARSET)
 	c.String(http.StatusOK, `<!DOCTYPE html><html><head><meta charset="UTF-8"><script>var dataContainer = `+ea(data)+`;</script></head><body onload="parent.`+funcName+`(dataContainer)"></body></html>`)
 }
 
-// Encode array for HTML/JS
 func ea(varData []interface{}) string {
 	res := ""
 	for i, v := range varData {
