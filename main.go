@@ -240,13 +240,7 @@ func s3ListAllAudioFiles(prefix string) ([]string, error) {
 // --- Updated API Logic Handlers ---
 
 func handleGetAllMp3(c *gin.Context) {
-	var files []string
-	var err error
-	if localMusicDir != "" {
-		files, err = localListAllAudioFiles("")
-	} else {
-		files, err = s3ListAllAudioFiles("")
-	}
+	files, err := listAllAudioFiles("")
 	if err != nil {
 		log.Printf("Get all mp3 error: %v", err)
 		echoReqHtml(c, []interface{}{"error", "Failed to scan music files"}, "getAllMp3Data")
@@ -257,13 +251,7 @@ func handleGetAllMp3(c *gin.Context) {
 }
 
 func handleGetAllMp3InDir(c *gin.Context, dir string) {
-	var files []string
-	var err error
-	if localMusicDir != "" {
-		files, err = localListAllAudioFiles(dir)
-	} else {
-		files, err = s3ListAllAudioFiles(dir)
-	}
+	files, err := listAllAudioFiles(dir)
 	if err != nil {
 		log.Printf("Get all mp3 in dir error: %v", err)
 		echoReqHtml(c, []interface{}{"error", "Failed to scan music directory"}, "getAllMp3Data")
@@ -274,13 +262,7 @@ func handleGetAllMp3InDir(c *gin.Context, dir string) {
 }
 
 func handleGetAllDirs(c *gin.Context) {
-	var dirs []string
-	var err error
-	if localMusicDir != "" {
-		dirs, err = localListAllDirs()
-	} else {
-		dirs, err = s3ListAllDirs()
-	}
+	dirs, err := listAllDirs()
 	if err != nil {
 		log.Printf("Get all dirs error: %v", err)
 		echoReqHtml(c, []interface{}{"error", "Failed to scan directories"}, "getAllDirsData")
@@ -293,13 +275,7 @@ func handleGetAllDirs(c *gin.Context) {
 }
 
 func handleDirRequest(c *gin.Context, dir string) {
-	var dirs, files []string
-	var err error
-	if localMusicDir != "" {
-		dirs, files, err = localList(dir)
-	} else {
-		dirs, files, err = s3List(dir, "/")
-	}
+	dirs, files, err := listDir(dir)
 	if err != nil {
 		log.Printf("List error: %v", err)
 		echoReqHtml(c, []interface{}{"error", TXT_ACC_DIR, dir, []string{}}, "getBrowserData")
@@ -316,13 +292,7 @@ func handleSearchTitle(c *gin.Context, searchStr string) {
 		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchTitle")
 		return
 	}
-	var titles []string
-	var err error
-	if localMusicDir != "" {
-		titles, err = localSearchFiles(searchStr)
-	} else {
-		titles, err = s3SearchFiles(searchStr)
-	}
+	titles, err := searchFiles(searchStr)
 	if err != nil {
 		log.Printf("Search error: %v", err)
 		echoReqHtml(c, []interface{}{"error", "Search error", []string{}}, "getSearchTitle")
@@ -341,13 +311,7 @@ func handleSearchDir(c *gin.Context, searchStr string) {
 		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchDir")
 		return
 	}
-	var dirs []string
-	var err error
-	if localMusicDir != "" {
-		dirs, err = localSearchDirs(searchStr)
-	} else {
-		dirs, err = s3SearchDirs(searchStr)
-	}
+	dirs, err := searchDirs(searchStr)
 	if err != nil {
 		log.Printf("Search dir error: %v", err)
 		echoReqHtml(c, []interface{}{"error", "Search dir error", []string{}}, "getSearchDir")
@@ -367,24 +331,13 @@ func handleGetAllMp3InDirs(c *gin.Context, data string) {
 		return
 	}
 	var allFiles []string
-	if localMusicDir != "" {
-		for _, folder := range selectedFolders {
-			files, ferr := localListAllAudioFiles(folder)
-			if ferr != nil {
-				log.Printf("Local get all mp3 in dirs error: %v", ferr)
-				continue
-			}
-			allFiles = append(allFiles, files...)
+	for _, folder := range selectedFolders {
+		files, ferr := listAllAudioFiles(folder)
+		if ferr != nil {
+			log.Printf("Get all mp3 in dirs error (%s): %v", folder, ferr)
+			continue
 		}
-	} else {
-		for _, folder := range selectedFolders {
-			files, ferr := s3ListAllAudioFiles(folder)
-			if ferr != nil {
-				log.Printf("S3 get all mp3 in dirs error: %v", ferr)
-				continue
-			}
-			allFiles = append(allFiles, files...)
-		}
+		allFiles = append(allFiles, files...)
 	}
 	uniqueFiles := make(map[string]bool)
 	var finalFiles []string
@@ -435,6 +388,47 @@ func isAudioFile(filename string) bool {
 		}
 	}
 	return false
+}
+
+// --- Backend-agnostic helper wrappers (reduce duplication) ---
+// These helpers choose the correct backend (local disk vs S3) based on configuration.
+// They intentionally preserve existing semantics (e.g. directory name formats, root inclusion).
+
+func usingLocal() bool { return localMusicDir != "" }
+
+func listDir(prefix string) ([]string, []string, error) {
+	if usingLocal() {
+		return localList(prefix)
+	}
+	return s3List(prefix, "/")
+}
+
+func listAllAudioFiles(prefix string) ([]string, error) {
+	if usingLocal() {
+		return localListAllAudioFiles(prefix)
+	}
+	return s3ListAllAudioFiles(prefix)
+}
+
+func listAllDirs() ([]string, error) {
+	if usingLocal() {
+		return localListAllDirs()
+	}
+	return s3ListAllDirs()
+}
+
+func searchFiles(term string) ([]string, error) {
+	if usingLocal() {
+		return localSearchFiles(term)
+	}
+	return s3SearchFiles(term)
+}
+
+func searchDirs(term string) ([]string, error) {
+	if usingLocal() {
+		return localSearchDirs(term)
+	}
+	return s3SearchDirs(term)
 }
 
 func echoReqHtml(c *gin.Context, data []interface{}, funcName string) {
