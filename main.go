@@ -56,8 +56,12 @@ var (
 func init() {
 	log.Printf("Gin cold start")
 	log.Printf("Build info: version=%s, commit=%s, buildTime=%s", version, commitHash, buildTime)
-	if err := initS3(); err != nil {
-		log.Fatalf("S3 init error: %v", err)
+	if localMusicDir == "" {
+		if err := initS3(); err != nil {
+			log.Fatalf("S3 init error: %v", err)
+		}
+	} else {
+		log.Printf("Using local music directory: %s", localMusicDir)
 	}
 
 	r = gin.Default()
@@ -71,6 +75,7 @@ func init() {
 	r.Use(ResponseLogger())
 	r.POST("/api", handleRequest)
 	r.GET("/audio/*path", audioProxyHandler)
+	r.GET("/localdisk/*path", localDiskHandler)
 	r.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusNotFound, "Not found")
 	})
@@ -104,6 +109,18 @@ func audioProxyHandler(c *gin.Context) {
 		return
 	}
 
+	if localMusicDir != "" {
+		// For local disk, return a JSON with the local file URL
+		filePath := filepath.Join(localMusicDir, key)
+		if _, err := os.Stat(filePath); err != nil {
+			c.String(http.StatusNotFound, "Audio not found")
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"url": "/localdisk/" + key})
+		return
+	}
+
+	// S3 mode: return presigned URL as JSON
 	presignedUrl, err := s3GetPresignedUrl(key)
 	if err != nil {
 		log.Printf("S3 presign error for key [%s]: %v", key, err)
@@ -111,6 +128,17 @@ func audioProxyHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"url": presignedUrl})
+}
+
+// Serve local files at /localdisk/*path
+func localDiskHandler(c *gin.Context) {
+	key := strings.TrimPrefix(c.Param("path"), "/")
+	filePath := filepath.Join(localMusicDir, key)
+	if _, err := os.Stat(filePath); err != nil {
+		c.String(http.StatusNotFound, "Audio not found")
+		return
+	}
+	c.File(filePath)
 }
 
 // s3GetPresignedUrl generates a pre-signed URL for the given S3 key.
@@ -179,10 +207,10 @@ func handleRequest(c *gin.Context) {
 		handleGetAllMp3(c)
 	case "getAllMp3InDir":
 		handleGetAllMp3InDir(c, data)
-	case "getAllMp3InDirs":
-		handleGetAllMp3InDirs(c, data)
 	case "getAllDirs":
 		handleGetAllDirs(c)
+	case "getAllMp3InDirs":
+		handleGetAllMp3InDirs(c, data)
 	default:
 		echoReqHtml(c, []interface{}{"error", "Unknown function"}, "default")
 	}
@@ -209,7 +237,128 @@ func s3ListAllAudioFiles(prefix string) ([]string, error) {
 	return allFiles, nil
 }
 
-// --- API Logic Handlers ---
+// --- Updated API Logic Handlers ---
+
+func handleGetAllMp3(c *gin.Context) {
+	var files []string
+	var err error
+	if localMusicDir != "" {
+		files, err = localListAllAudioFiles("")
+	} else {
+		files, err = s3ListAllAudioFiles("")
+	}
+	if err != nil {
+		log.Printf("Get all mp3 error: %v", err)
+		echoReqHtml(c, []interface{}{"error", "Failed to scan music files"}, "getAllMp3Data")
+		return
+	}
+	sort.Strings(files)
+	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3Data")
+}
+
+func handleGetAllMp3InDir(c *gin.Context, dir string) {
+	var files []string
+	var err error
+	if localMusicDir != "" {
+		files, err = localListAllAudioFiles(dir)
+	} else {
+		files, err = s3ListAllAudioFiles(dir)
+	}
+	if err != nil {
+		log.Printf("Get all mp3 in dir error: %v", err)
+		echoReqHtml(c, []interface{}{"error", "Failed to scan music directory"}, "getAllMp3Data")
+		return
+	}
+	sort.Strings(files)
+	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3Data")
+}
+
+func handleGetAllDirs(c *gin.Context) {
+	var dirs []string
+	var err error
+	if localMusicDir != "" {
+		dirs, err = localListAllDirs()
+	} else {
+		dirs, err = s3ListAllDirs()
+	}
+	if err != nil {
+		log.Printf("Get all dirs error: %v", err)
+		echoReqHtml(c, []interface{}{"error", "Failed to scan directories"}, "getAllDirsData")
+		return
+	}
+	if len(dirs) > 1 {
+		sort.Strings(dirs[1:]) // keep root at top
+	}
+	echoReqHtml(c, []interface{}{"ok", dirs}, "getAllDirsData")
+}
+
+func handleDirRequest(c *gin.Context, dir string) {
+	var dirs, files []string
+	var err error
+	if localMusicDir != "" {
+		dirs, files, err = localList(dir)
+	} else {
+		dirs, files, err = s3List(dir, "/")
+	}
+	if err != nil {
+		log.Printf("List error: %v", err)
+		echoReqHtml(c, []interface{}{"error", TXT_ACC_DIR, dir, []string{}}, "getBrowserData")
+		return
+	}
+	sort.Strings(dirs)
+	sort.Strings(files)
+	echoReqHtml(c, []interface{}{"ok", dir, dirs, files}, "getBrowserData")
+}
+
+func handleSearchTitle(c *gin.Context, searchStr string) {
+	searchStr = strings.TrimSpace(searchStr)
+	if len(searchStr) < MIN_SEARCH_STR {
+		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchTitle")
+		return
+	}
+	var titles []string
+	var err error
+	if localMusicDir != "" {
+		titles, err = localSearchFiles(searchStr)
+	} else {
+		titles, err = s3SearchFiles(searchStr)
+	}
+	if err != nil {
+		log.Printf("Search error: %v", err)
+		echoReqHtml(c, []interface{}{"error", "Search error", []string{}}, "getSearchTitle")
+		return
+	}
+	if len(titles) > MAX_SEARCH_RESULT {
+		titles = titles[:MAX_SEARCH_RESULT]
+	}
+	sort.Strings(titles)
+	echoReqHtml(c, []interface{}{"", titles}, "getSearchTitle")
+}
+
+func handleSearchDir(c *gin.Context, searchStr string) {
+	searchStr = strings.TrimSpace(searchStr)
+	if len(searchStr) < MIN_SEARCH_STR {
+		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchDir")
+		return
+	}
+	var dirs []string
+	var err error
+	if localMusicDir != "" {
+		dirs, err = localSearchDirs(searchStr)
+	} else {
+		dirs, err = s3SearchDirs(searchStr)
+	}
+	if err != nil {
+		log.Printf("Search dir error: %v", err)
+		echoReqHtml(c, []interface{}{"error", "Search dir error", []string{}}, "getSearchDir")
+		return
+	}
+	if len(dirs) > MAX_SEARCH_RESULT {
+		dirs = dirs[:MAX_SEARCH_RESULT]
+	}
+	sort.Strings(dirs)
+	echoReqHtml(c, []interface{}{"", dirs}, "getSearchDir")
+}
 
 func handleGetAllMp3InDirs(c *gin.Context, data string) {
 	var selectedFolders []string
@@ -218,13 +367,24 @@ func handleGetAllMp3InDirs(c *gin.Context, data string) {
 		return
 	}
 	var allFiles []string
-	for _, folder := range selectedFolders {
-		files, err := s3ListAllAudioFiles(folder)
-		if err != nil {
-			log.Printf("S3 get all mp3 in dirs error: %v", err)
-			continue
+	if localMusicDir != "" {
+		for _, folder := range selectedFolders {
+			files, ferr := localListAllAudioFiles(folder)
+			if ferr != nil {
+				log.Printf("Local get all mp3 in dirs error: %v", ferr)
+				continue
+			}
+			allFiles = append(allFiles, files...)
 		}
-		allFiles = append(allFiles, files...)
+	} else {
+		for _, folder := range selectedFolders {
+			files, ferr := s3ListAllAudioFiles(folder)
+			if ferr != nil {
+				log.Printf("S3 get all mp3 in dirs error: %v", ferr)
+				continue
+			}
+			allFiles = append(allFiles, files...)
+		}
 	}
 	uniqueFiles := make(map[string]bool)
 	var finalFiles []string
@@ -238,10 +398,51 @@ func handleGetAllMp3InDirs(c *gin.Context, data string) {
 	echoReqHtml(c, []interface{}{"ok", finalFiles}, "getAllMp3Data")
 }
 
-// ... (omitting the rest of the handlers for brevity as they are unchanged)
+type responseWriter struct {
+	gin.ResponseWriter
+	buffer *bytes.Buffer
+	rw.buffer.Write(b)
+	return rw.ResponseWriter.Write(b)
+	log.Printf("Response to %s %s: %s", c.Request.Method, c.Request.URL.Path, response)
+	return func(c *gin.Context) {
+		var responseBuffer bytes.Buffer
+		writer := &responseWriter{ResponseWriter: c.Writer, buffer: &responseBuffer}
+		c.Writer = writer
+		c.Next()
+		if c.Writer.Status() >= 400 {
+			logResponse(c, responseBuffer.String())
+		}
+	}
+	ext := strings.ToLower(filepath.Ext(filename))
+	for _, audioExt := range audioExtensions {
+		if ext == "."+audioExt {
+			return true
+		}
+	}
+	return false
+	c.Header("Content-Type", "text/html; charset="+CHARSET)
+	c.String(http.StatusOK, `<!DOCTYPE html><html><head><meta charset="UTF-8"><script>var dataContainer = `+ea(data)+`;</script></head><body onload="parent.`+funcName+`(dataContainer)"></body></html>`)
+	res := ""
+	for i, v := range varData {
+		if i > 0 {
+			res += ","
+		}
+		if arr, ok := v.([]string); ok {
+			var quotedItems []string
+			for _, item := range arr {
+				quotedItems = append(quotedItems, `"`+strings.ReplaceAll(item, `"`, `\\"`)+`"`)
+			}
+			res += "[" + strings.Join(quotedItems, ",") + "]"
+		} else {
+			res += `"` + strings.ReplaceAll(fmt.Sprint(v), `"`, `\\"`) + `"`
+		}
+	}
+	return "[" + res + "]"
+
 
 // --- Utility Functions ---
 
+// ResponseWriter for logging responses
 type responseWriter struct {
 	gin.ResponseWriter
 	buffer *bytes.Buffer
@@ -268,6 +469,7 @@ func ResponseLogger() gin.HandlerFunc {
 	}
 }
 
+// Check if file is an audio file
 func isAudioFile(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
 	for _, audioExt := range audioExtensions {
@@ -278,11 +480,13 @@ func isAudioFile(filename string) bool {
 	return false
 }
 
+// Echo HTML response for frontend callback
 func echoReqHtml(c *gin.Context, data []interface{}, funcName string) {
-	c.Header("Content-Type", "text/html; charset="+CHARSET)
+	c.Header("Content-Type", "text/html; charset=""+CHARSET)
 	c.String(http.StatusOK, `<!DOCTYPE html><html><head><meta charset="UTF-8"><script>var dataContainer = `+ea(data)+`;</script></head><body onload="parent.`+funcName+`(dataContainer)"></body></html>`)
 }
 
+// Encode array for HTML/JS
 func ea(varData []interface{}) string {
 	res := ""
 	for i, v := range varData {
@@ -304,18 +508,6 @@ func ea(varData []interface{}) string {
 
 // --- Placeholder handlers from original code ---
 // It's good practice to ensure all called functions exist.
-
-func handleDirRequest(c *gin.Context, dir string) {
-	dirs, files, err := s3List(dir, "/")
-	if err != nil {
-		log.Printf("S3 list error: %v", err)
-		echoReqHtml(c, []interface{}{"error", TXT_ACC_DIR, dir, []string{}}, "getBrowserData")
-		return
-	}
-	sort.Strings(dirs)
-	sort.Strings(files)
-	echoReqHtml(c, []interface{}{"ok", dir, dirs, files}, "getBrowserData")
-}
 
 func s3List(prefix string, delimiter string) ([]string, []string, error) {
 	var dirs, files []string
@@ -344,25 +536,6 @@ func s3List(prefix string, delimiter string) ([]string, []string, error) {
 	return dirs, files, nil
 }
 
-func handleSearchTitle(c *gin.Context, searchStr string) {
-	searchStr = strings.TrimSpace(searchStr)
-	if len(searchStr) < MIN_SEARCH_STR {
-		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchTitle")
-		return
-	}
-	titles, err := s3SearchFiles(searchStr)
-	if err != nil {
-		log.Printf("S3 search error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "S3 search error", []string{}}, "getSearchTitle")
-		return
-	}
-	if len(titles) > MAX_SEARCH_RESULT {
-		titles = titles[:MAX_SEARCH_RESULT]
-	}
-	sort.Strings(titles)
-	echoReqHtml(c, []interface{}{"", titles}, "getSearchTitle")
-}
-
 func s3SearchFiles(searchStr string) ([]string, error) {
 	allFiles, err := s3ListAllAudioFiles("")
 	if err != nil {
@@ -375,25 +548,6 @@ func s3SearchFiles(searchStr string) ([]string, error) {
 		}
 	}
 	return matches, nil
-}
-
-func handleSearchDir(c *gin.Context, searchStr string) {
-	searchStr = strings.TrimSpace(searchStr)
-	if len(searchStr) < MIN_SEARCH_STR {
-		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchDir")
-		return
-	}
-	dirs, err := s3SearchDirs(searchStr)
-	if err != nil {
-		log.Printf("S3 search dir error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "S3 search dir error", []string{}}, "getSearchDir")
-		return
-	}
-	if len(dirs) > MAX_SEARCH_RESULT {
-		dirs = dirs[:MAX_SEARCH_RESULT]
-	}
-	sort.Strings(dirs)
-	echoReqHtml(c, []interface{}{"", dirs}, "getSearchDir")
 }
 
 func s3SearchDirs(searchStr string) ([]string, error) {
@@ -439,35 +593,89 @@ func s3ListAllDirs() ([]string, error) {
 	return allDirs, nil
 }
 
-func handleGetAllMp3(c *gin.Context) {
-	files, err := s3ListAllAudioFiles("")
+// --- Local Disk Helper Functions ---
+
+var localMusicDir = os.Getenv("MUSIC_DIR") // e.g. "/mp3"
+
+func localList(prefix string) ([]string, []string, error) {
+	var dirs, files []string
+	base := filepath.Join(localMusicDir, prefix)
+	entries, err := os.ReadDir(base)
 	if err != nil {
-		log.Printf("S3 get all mp3 error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Failed to scan S3 bucket"}, "getAllMp3Data")
-		return
+		return nil, nil, err
 	}
-	sort.Strings(files)
-	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3Data")
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() {
+			dirs = append(dirs, name)
+		} else if isAudioFile(name) {
+			files = append(files, name)
+		}
+	}
+	return dirs, files, nil
 }
 
-func handleGetAllMp3InDir(c *gin.Context, dir string) {
-	files, err := s3ListAllAudioFiles(dir)
+func localListAllAudioFiles(prefix string) ([]string, error) {
+	var allFiles []string
+	base := filepath.Join(localMusicDir, prefix)
+	err := filepath.Walk(base, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && isAudioFile(info.Name()) {
+			rel, _ := filepath.Rel(localMusicDir, path)
+			allFiles = append(allFiles, rel)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("S3 get all mp3 in dir error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Failed to scan S3 directory"}, "getAllMp3Data")
-		return
+		return nil, err
 	}
-	sort.Strings(files)
-	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3Data")
+	return allFiles, nil
 }
 
-func handleGetAllDirs(c *gin.Context) {
-	dirs, err := s3ListAllDirs()
+func localListAllDirs() ([]string, error) {
+	var allDirs []string
+	err := filepath.Walk(localMusicDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			rel, _ := filepath.Rel(localMusicDir, path)
+			allDirs = append(allDirs, rel)
+		}
+		return nil
+	})
 	if err != nil {
-		log.Printf("S3 get all dirs error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Failed to scan S3 directories"}, "getAllDirsData")
-		return
+		return nil, err
 	}
-	sort.Strings(dirs[1:]) // keep root at top
-	echoReqHtml(c, []interface{}{"ok", dirs}, "getAllDirsData")
+	return allDirs, nil
+}
+
+func localSearchFiles(searchStr string) ([]string, error) {
+	allFiles, err := localListAllAudioFiles("")
+	if err != nil {
+		return nil, err
+	}
+	var matches []string
+	for _, f := range allFiles {
+		if strings.Contains(strings.ToLower(f), strings.ToLower(searchStr)) {
+			matches = append(matches, f)
+		}
+	}
+	return matches, nil
+}
+
+func localSearchDirs(searchStr string) ([]string, error) {
+	allDirs, err := localListAllDirs()
+	if err != nil {
+		return nil, err
+	}
+	var matches []string
+	for _, d := range allDirs {
+		if strings.Contains(strings.ToLower(d), strings.ToLower(searchStr)) {
+			matches = append(matches, d+"/")
+		}
+	}
+	return matches, nil
 }
