@@ -1,6 +1,6 @@
 services:
   go-music:
-    image: go-music:latest
+    image: ghcr.io/johnwmail/go-music:latest
     container_name: go-music
     restart: unless-stopped
     read_only: true
