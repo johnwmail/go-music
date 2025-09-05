@@ -79,6 +79,7 @@ jobs:
           handler: bootstrap
           publish: true
           role: ${{ secrets.LAMBDA_EXECUTION_ROLE }}
+          s3-bucket: "${{ vars.BUCKET }}"
           environment: '{"BUCKET":"${{ vars.BUCKET }}","S3_PREFIX":"${{ vars.S3_PREFIX }}","GIN_MODE":"release"}'
 
       - name: Post-deploy info
