@@ -1,41 +1,87 @@
 name: Build and Deploy to Lambda
 
 on:
+  workflow_dispatch:
+    inputs:
+      function_name:
+        description: "Override Lambda function name (optional). If empty, uses LAMBDA_FUNCTION_NAME environment variable."
+        required: false
+        default: ""
   push:
     branches:
-      - deploy/lambda
+      - 'deploy/lambda'
 
 jobs:
-  build-and-deploy:
+  deploy-lambda:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
-      CGO_ENABLED: 0
       GOOS: linux
       GOARCH: arm64
+      CGO_ENABLED: 0
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
 
-      - name: Build Go App
+      - name: Download deps
+        run: go mod download
+
+      - name: Build Lambda bootstrap
         run: |
           go build \
             -ldflags "-X main.buildTime=$(date --utc +%Y-%m-%dT%H:%M:%SZ) -X main.commitHash=${{ github.sha }} -X main.version=${{ github.ref_name }}" \
             -tags netgo -trimpath \
             -o ./bootstrap ./...
 
-      - name: Deploy to Lambda
-        uses: appleboy/lambda-action@v0.2.0
+      - name: Prepare code artifacts
+        run: |
+          mkdir -p lambda-artifacts
+          mv -f bootstrap lambda-artifacts/bootstrap
+          ls -l lambda-artifacts
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID_DEPLOY_LAMBDA }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEPLOY_LAMBDA }}
-          aws_region: ${{ secrets.AWS_REGION }}
-          function_name: ${{ vars.LAMBDA_FUNCTION_NAME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEPLOY_LAMBDA }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEPLOY_LAMBDA }}
+
+      - name: Resolve Lambda function name
+        id: resolve-fn
+        run: |
+          FN_IN="${{ inputs.function_name }}"
+          if [ -n "${FN_IN}" ]; then
+            echo "Using function name from manual input: ${FN_IN}"
+            echo "name=${FN_IN}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${{ vars.LAMBDA_FUNCTION_NAME }}" ]; then
+            echo "LAMBDA_FUNCTION_NAME secret is required when no manual input is provided" >&2
+            exit 1
+          fi
+          echo "Using function name from secret"
+          echo "name=${{ vars.LAMBDA_FUNCTION_NAME }}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Lambda Function
+        id: lambda-deploy
+        uses: aws-actions/aws-lambda-deploy@v1
+        with:
+          function-name: ${{ steps.resolve-fn.outputs.name }}
+          code-artifacts-dir: lambda-artifacts
           architectures: arm64
-          source: ./bootstrap,./static
-          environment: BUCKET=${{ vars.BUCKET }},S3_PREFIX=${{ vars.S3_PREFIX }}
-          #debug: true
+          runtime: provided.al2023
+          handler: bootstrap
+          publish: true
+          role: ${{ secrets.LAMBDA_EXECUTION_ROLE }}
+          environment: '{"BUCKET":"${{ vars.BUCKET }}","S3_PREFIX":"${{ vars.S3_PREFIX }}","GIN_MODE":"release"}'
+
+      - name: Post-deploy info
+        run: |
+          echo "Function ARN: ${{ steps.lambda-deploy.outputs.function-arn }}"
+          echo "Version:      ${{ steps.lambda-deploy.outputs.version }}"
