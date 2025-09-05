@@ -62,7 +62,7 @@ jobs:
             exit 0
           fi
           if [ -z "${{ vars.LAMBDA_FUNCTION_NAME }}" ]; then
-            echo "LAMBDA_FUNCTION_NAME secret is required when no manual input is provided" >&2
+            echo "LAMBDA_FUNCTION_NAME variable is required when no manual input is provided" >&2
             exit 1
           fi
           echo "Using function name from secret"
