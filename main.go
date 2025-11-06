@@ -56,6 +56,8 @@ var (
 func init() {
 	log.Printf("Gin cold start")
 	log.Printf("Build info: version=%s, commit=%s, buildTime=%s", version, commitHash, buildTime)
+
+	// Initialize storage backend
 	if localMusicDir == "" {
 		if err := initS3(); err != nil {
 			log.Fatalf("S3 init error: %v", err)
@@ -108,6 +110,11 @@ func audioProxyHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Missing song path")
 		return
 	}
+
+	// Prevent caching of pre-signed URLs by Cloudflare or other proxies
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0")
+	c.Header("Pragma", "no-cache")
+	c.Header("Expires", "0")
 
 	if localMusicDir != "" {
 		// For local disk, return a JSON with the local file URL
