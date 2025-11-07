@@ -716,11 +716,15 @@ function getAllDirsData(data) {
         return;
     }
     var html = '<b>Select folders:</b><br><ul style="max-height:50vh;overflow:auto;padding-left:1em;list-style-type:none;">';
+    // Helper to escape backslashes and single quotes for inclusion in single-quoted JS string
+    function jsSingleQuoteEscape(str) {
+        return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
     for (var i = 0; i < data[1].length; i++) {
         var folder = data[1][i];
         var displayName = (folder === '' ? 'Home' : 'Home/' + folder);
         var checkboxId = 'checkbox_' + folder.replace(/[^a-zA-Z0-9]/g, '_');
-        html += '<li style="margin:0.5em 0;" onclick="toggleFolderSelection(\'' + folder.replace(/'/g, "\\'") + '\')"><label style="display:flex;align-items:center;cursor:pointer;"><input type="checkbox" id="' + checkboxId + '" style="margin-right:0.5em;" readOnly> ' + displayName + '</label></li>';
+        html += '<li style="margin:0.5em 0;" onclick="toggleFolderSelection(\'' + jsSingleQuoteEscape(folder) + '\')"><label style="display:flex;align-items:center;cursor:pointer;"><input type="checkbox" id="' + checkboxId + '" style="margin-right:0.5em;" readOnly> ' + displayName + '</label></li>';
     }
     html += '</ul>';
     folderListDiv.innerHTML = html;
