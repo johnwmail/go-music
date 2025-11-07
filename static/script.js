@@ -98,7 +98,7 @@ function init() {
 }
 
 function loadVersion() {
-    // Try to get version from build metadata
+    // Load version information from the server API
     loadFromServer('version', '');
 }
 
