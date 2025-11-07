@@ -111,6 +111,12 @@ func audioProxyHandler(c *gin.Context) {
 		return
 	}
 
+	// Validate path to prevent directory traversal attacks
+	if strings.Contains(key, "..") || strings.HasPrefix(key, "/") {
+		c.String(http.StatusBadRequest, "Invalid path")
+		return
+	}
+
 	// Prevent caching of pre-signed URLs by Cloudflare or other proxies
 	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0")
 	c.Header("Pragma", "no-cache")
@@ -118,8 +124,27 @@ func audioProxyHandler(c *gin.Context) {
 
 	if localMusicDir != "" {
 		// For local disk, return a JSON with the local file URL
-		filePath := filepath.Join(localMusicDir, key)
-		if _, err := os.Stat(filePath); err != nil {
+		filePath := filepath.Join(localMusicDir, filepath.Clean(key))
+		
+		// Ensure the resolved path is within the music directory
+		absPath, err := filepath.Abs(filePath)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid path")
+			return
+		}
+		
+		absMusicDir, err := filepath.Abs(localMusicDir)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Server configuration error")
+			return
+		}
+		
+		if !strings.HasPrefix(absPath, absMusicDir) {
+			c.String(http.StatusForbidden, "Access denied")
+			return
+		}
+		
+		if _, err := os.Stat(absPath); err != nil {
 			c.String(http.StatusNotFound, "Audio not found")
 			return
 		}
@@ -140,12 +165,38 @@ func audioProxyHandler(c *gin.Context) {
 // Serve local files at /localdisk/*path
 func localDiskHandler(c *gin.Context) {
 	key := strings.TrimPrefix(c.Param("path"), "/")
-	filePath := filepath.Join(localMusicDir, key)
-	if _, err := os.Stat(filePath); err != nil {
+	
+	// Validate path to prevent directory traversal attacks
+	if key == "" || strings.Contains(key, "..") || strings.HasPrefix(key, "/") {
+		c.String(http.StatusBadRequest, "Invalid path")
+		return
+	}
+	
+	filePath := filepath.Join(localMusicDir, filepath.Clean(key))
+	
+	// Ensure the resolved path is within the music directory
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		c.String(http.StatusBadRequest, "Invalid path")
+		return
+	}
+	
+	absMusicDir, err := filepath.Abs(localMusicDir)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Server configuration error")
+		return
+	}
+	
+	if !strings.HasPrefix(absPath, absMusicDir) {
+		c.String(http.StatusForbidden, "Access denied")
+		return
+	}
+	
+	if _, err := os.Stat(absPath); err != nil {
 		c.String(http.StatusNotFound, "Audio not found")
 		return
 	}
-	c.File(filePath)
+	c.File(absPath)
 }
 
 // s3GetPresignedUrl generates a pre-signed URL for the given S3 key.
