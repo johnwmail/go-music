@@ -20,3 +20,7 @@ services:
       - S3_PREFIX=${S3_PREFIX}
       - BUCKET=${BUCKET}
       - GIN_MODE=release
+#    Uncomment the following lines to use a local music directory instead of S3
+#      - MUSIC_DIR=/music
+#    volumes:
+#      - /music:/music:ro

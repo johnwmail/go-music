@@ -61,7 +61,7 @@ cd go-music
 # Set required environment variables
 export BUCKET=your-s3-bucket-name
 export AWS_REGION=us-east-1
-export S3_PREFIX=music/  # optional
+export S3_PREFIX=music  # optional
 
 # Run the service
 go run .
@@ -113,7 +113,7 @@ The app switches to Lambda mode when `AWS_LAMBDA_FUNCTION_NAME` is present. The 
 
 1. Build the Lambda bootstrap binary:
    ```bash
-   GOOS=linux GOARCH=arm64 go build \
+   go build \
      -ldflags "-X main.Version=v1.0.0 -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.CommitHash=$(git rev-parse --short HEAD)" \
      -tags netgo -trimpath \
      -o bootstrap .
@@ -129,7 +129,7 @@ The app switches to Lambda mode when `AWS_LAMBDA_FUNCTION_NAME` is present. The 
 
 3. Deploy via AWS CLI or Console with these environment variables:
    - `BUCKET` – Your S3 bucket name
-   - `S3_PREFIX` – Optional prefix (e.g., "music/")
+   - `S3_PREFIX` – Optional prefix (e.g., "music")
    - `GIN_MODE` – Set to "release" for production
 
 #### Automated Deployment
@@ -170,7 +170,7 @@ The service uses environment variables for configuration:
 |----------|----------|---------|-------------|
 | `BUCKET` | Yes | – | S3 bucket containing your music files |
 | `AWS_REGION` | Recommended | auto-detect | AWS region for S3 bucket |
-| `S3_PREFIX` | No | `""` | Optional prefix path in S3 (e.g., "music/") |
+| `S3_PREFIX` | No | `""` | Optional prefix path in S3 (e.g., "music") |
 | `AWS_ACCESS_KEY_ID` | Docker only* | – | AWS access key (use IAM role in Lambda) |
 | `AWS_SECRET_ACCESS_KEY` | Docker only* | – | AWS secret key (use IAM role in Lambda) |
 | `PORT` | No | `8080` | HTTP server port (ignored in Lambda) |
@@ -184,7 +184,7 @@ Your S3 bucket should contain audio files organized in directories:
 
 ```
 my-music-bucket/
-├── music/                 # S3_PREFIX="music/"
+├── music/                 # S3_PREFIX="music"
 │   ├── Rock/
 │   │   ├── song1.mp3
 │   │   └── song2.mp3
