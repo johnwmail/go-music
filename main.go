@@ -47,15 +47,15 @@ var s3Client *s3.Client
 
 // Build info variables, set via -ldflags at build time
 var (
-	buildTime  = "unknown"
-	commitHash = "unknown"
-	version    = "dev"
+	Version    = "dev"
+	BuildTime  = "unknown"
+	CommitHash = "none"
 )
 
 // init function runs before main and sets up the Gin router.
 func init() {
 	log.Printf("Gin cold start")
-	log.Printf("Build info: version=%s, commit=%s, buildTime=%s", version, commitHash, buildTime)
+	log.Printf("Build info: Version=%s, CommitHash=%s, BuildTime=%s", Version, CommitHash, BuildTime)
 
 	// Initialize storage backend
 	if localMusicDir == "" {
