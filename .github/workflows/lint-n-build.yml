@@ -53,6 +53,6 @@ jobs:
       - name: Build binary
         run: |
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
-            -ldflags "-X main.buildTime=$(date --utc +%Y-%m-%dT%H:%M:%SZ) -X main.commitHash=${{ github.sha }} -X main.version=${{ github.ref_name }}" \
+            -ldflags "-X main.BuildTime=$(date --utc +%Y-%m-%dT%H:%M:%SZ) -X main.CommitHash=${{ github.sha }} -X main.Version=${{ github.ref_name }}" \
             -tags netgo -trimpath \
             -o go-music-${{ matrix.goos }}-${{ matrix.goarch }} main.go
