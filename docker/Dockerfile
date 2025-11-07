@@ -14,6 +14,10 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
        -X 'main.Version=${VERSION:-latest}'" \
        -o /build/go-music .
 
+# Certificate stage
+FROM alpine:latest AS certs
+RUN apk --no-cache add ca-certificates
+
 FROM scratch
 
 WORKDIR /app
@@ -22,6 +26,8 @@ WORKDIR /app
 COPY --from=build /build/static /app/static
 # copy the compiled binary placed at /build/go-music in the build stage
 COPY --from=build /build/go-music /app/go-music
+# copy CA certificates for HTTPS/TLS connections (needed for AWS S3)
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 USER 8080:8080
 EXPOSE 8080
