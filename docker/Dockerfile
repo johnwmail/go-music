@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=$BUILDPLATFORM golang:1.24 AS build
+FROM golang:1.24 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -14,7 +14,9 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
        -X 'main.Version=${VERSION:-latest}'" \
        -o /build/go-music .
 
-FROM scratch
+# Runtime stage 
+# distroless/static has certs , which needs for access S3 bucket
+FROM gcr.io/distroless/static:nonroot
 
 WORKDIR /app
 
@@ -26,3 +28,4 @@ COPY --from=build /build/go-music /app/go-music
 USER 8080:8080
 EXPOSE 8080
 ENTRYPOINT ["/app/go-music"]
+
