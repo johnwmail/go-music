@@ -265,7 +265,7 @@ Follow idiomatic Go practices and community standards when writing Go code. Thes
 
 - `go fmt`: Format code
 - `go vet`: Find suspicious constructs
-- `golint` or `golangci-lint`: Additional linting
+- `golangci-lint` (or `staticcheck`): Additional linting
 - `go test`: Run tests
 - `go mod`: Manage dependencies
 - `go generate`: Code generation
