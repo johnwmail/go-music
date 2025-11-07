@@ -269,9 +269,19 @@ func handleRequest(c *gin.Context) {
 		handleGetAllDirs(c)
 	case "getAllMp3InDirs":
 		handleGetAllMp3InDirs(c, data)
+	case "version":
+		handleVersion(c)
 	default:
 		echoReqHtml(c, []interface{}{"error", "Unknown function"}, "default")
 	}
+}
+
+func handleVersion(c *gin.Context) {
+	versionInfo := fmt.Sprintf("%s (%s)", Version, CommitHash)
+	if BuildTime != "unknown" {
+		versionInfo = fmt.Sprintf("%s - %s", versionInfo, BuildTime)
+	}
+	echoReqHtml(c, []interface{}{"ok", versionInfo}, "setVersion")
 }
 
 // --- S3 Helper Functions ---

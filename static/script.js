@@ -79,14 +79,15 @@ function init() {
     updateProgressBar();
     browseDir();
     updateAllLists();
+    loadVersion();
     player.onended = function() {
         changeTrack(1);
     }
     player.onpause = function() {
-        gebi('buttonPlay').innerHTML = '<alignPlay>&#9658;</alignPlay>';
+        gebi('buttonPlay').innerHTML = '<span>▶</span>';
     }
     player.onplaying = function() {
-        gebi('buttonPlay').innerHTML = '<alignJumpPause>&#10074;&#10074;</alignJumpPause>';
+        gebi('buttonPlay').innerHTML = '<span>⏸</span>';
     }
     player.ontimeupdate = function() {
         updateProgressBar();
@@ -96,17 +97,30 @@ function init() {
     }
 }
 
+function loadVersion() {
+    // Try to get version from build metadata
+    loadFromServer('version', '');
+}
+
+function setVersion(data) {
+    if (data[0] === 'ok' && data[1]) {
+        gebi('appVersion').textContent = data[1];
+    }
+}
+
 
 function markLoading(tab) {
+    var browserLoader = gebi('markLoadBrowser');
+    var searchLoader = gebi('markLoadSearch');
     if (tab == false) {
-        gebi('markLoadBrowser').style.visibility = 'hidden';
-        gebi('markLoadSearch').style.visibility = 'hidden';
+        browserLoader.classList.remove('visible');
+        searchLoader.classList.remove('visible');
     } else if (tab == 'browser') {
-        gebi('markLoadBrowser').style.visibility = 'visible';
-        gebi('markLoadSearch').style.visibility = 'hidden';
+        browserLoader.classList.add('visible');
+        searchLoader.classList.remove('visible');
     } else if (tab == 'search') {
-        gebi('markLoadBrowser').style.visibility = 'hidden';
-        gebi('markLoadSearch').style.visibility = 'visible';
+        browserLoader.classList.remove('visible');
+        searchLoader.classList.add('visible');
     }
 }
 
@@ -134,10 +148,10 @@ function updateProgressBar() {
     var max = player.duration;
     if ((cur != cur) || (max != max) || (cur > max)) {
         var bar = '';
-        var progress = -1; // Set progress to a value that will trigger the update
+        var progress = -1;
         lastProgress = progress;
         for (var i = 0; i < leds; i++) {
-            bar += '<div class="barGrey"></div>';
+            bar += '<div class="progress-segment"></div>';
         }
         gebi('bar').innerHTML = bar;
         gebi('trackCurrentTime').innerHTML = secondsToTime(0);
@@ -155,7 +169,13 @@ function updateProgressBar() {
             var bar = '';
             lastProgress = progress;
             for (var i = 0; i < leds; i++) {
-                bar += '<div class="' + (progress == i ? "barOn" : "barOff") + '" onClick="player.currentTime=' + Math.ceil(max / leds * (i)) + '"></div>';
+                var className = 'progress-segment';
+                if (i == progress) {
+                    className += ' active';
+                } else if (i < progress) {
+                    className += ' inactive';
+                }
+                bar += '<div class="' + className + '" onClick="player.currentTime=' + Math.ceil(max / leds * (i)) + '"></div>';
             }
             gebi('bar').innerHTML = bar;
         }
@@ -219,10 +239,11 @@ function skipSec(sec) {
 
 function shuffleToggle() {
     shuffle = !shuffle;
+    var shuffleBtn = gebi('shuffle');
     if (shuffle) {
-        gebi('shuffle').className = 'shuffleOn';
+        shuffleBtn.classList.add('active');
     } else {
-        gebi('shuffle').className = 'shuffleOff';
+        shuffleBtn.classList.remove('active');
     }
 }
 
@@ -298,22 +319,20 @@ function changeTrack(dir) {
 
 function markPlayingTab(tab) {
     playingFrom = tab;
+    var browserMark = gebi('markBrowser');
+    var listMark = gebi('markList');
+    var searchMark = gebi('markSearch');
+    
+    browserMark.classList.remove('visible');
+    listMark.classList.remove('visible');
+    searchMark.classList.remove('visible');
+    
     if (playingFrom == 'browser') {
-        gebi('markBrowser').style.visibility = 'visible';
-        gebi('markList').style.visibility = 'hidden';
-        gebi('markSearch').style.visibility = 'hidden';
+        browserMark.classList.add('visible');
     } else if (playingFrom == 'list') {
-        gebi('markBrowser').style.visibility = 'hidden';
-        gebi('markList').style.visibility = 'visible';
-        gebi('markSearch').style.visibility = 'hidden';
+        listMark.classList.add('visible');
     } else if (playingFrom == 'search') {
-        gebi('markBrowser').style.visibility = 'hidden';
-        gebi('markList').style.visibility = 'hidden';
-        gebi('markSearch').style.visibility = 'visible';
-    } else {
-        gebi('markBrowser').style.visibility = 'hidden';
-        gebi('markList').style.visibility = 'hidden';
-        gebi('markSearch').style.visibility = 'hidden';
+        searchMark.classList.add('visible');
     }
 }
 
@@ -352,7 +371,10 @@ function updateAllLists() {
 
 
 function setAndPlayTrack(track) {
-    gebi('trackName').innerHTML = '&nbsp;' + getTrackTitle(track) + '<br>&nbsp;<smallPath>' + getTrackDir(track) + '</smallPath>';
+    var trackTitle = getTrackTitle(track);
+    var trackDir = getTrackDir(track);
+    var trackNameEl = gebi('trackName');
+    trackNameEl.innerHTML = '<div class="track-title">' + trackTitle + '</div><div class="track-path">' + trackDir + '</div>';
     playingTrack = track;
     // Fetch the pre-signed S3 URL from the backend and set it as the audio src
     fetch('/audio/' + track)
@@ -385,37 +407,74 @@ function getTrackDir(track) {
 
 
 function updateBrowser() {
-    var list = '';
-    list += '<div class="pathContainer"><div class="browserPath" onClick="browseDir()">&nbsp;Home&nbsp;</div>';
+    var list = '<div class="item-list">';
+    
+    // Breadcrumb navigation
+    list += '<div class="breadcrumb">';
+    list += '<div class="breadcrumb-item" onClick="browseDir()">🏠 Home</div>';
     for (var i = 0; i < browserCurDirs.length; i++) {
-        list += '<div class="browserPath" onClick="browseDirFromBreadCrumbBar(' + i + ')">&nbsp;' + browserCurDirs[i] + '&nbsp;</div>';
+        list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + browserCurDirs[i] + '</div>';
     }
     list += '</div>';
+    
+    // Directories
     for (var i = 0; i < browserDirs.length; i++) {
-        list += '<div class="listContainer"><div class="browserDir" onClick="browseDir(' + i + ')">&nbsp;' + browserDirs[i] + '&nbsp;<br>&nbsp;<smallPath>' + getTrackDir(browserCurDir) + '</smallPath></div></div>';
+        list += '<div class="list-item directory" onClick="browseDir(' + i + ')">';
+        list += '<div class="item-content">';
+        list += '<div class="item-title">📁 ' + browserDirs[i] + '</div>';
+        list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
+        list += '</div></div>';
     }
+    
+    // Music files
     var playlistCount;
     for (var i = 0; i < browserTitles.length; i++) {
         playlistCount = inPlaylist(browserCurDir + browserTitles[i]);
-        list += '<div class="listContainer"><div class="' + (playingTrack == browserCurDir + browserTitles[i] ? 'browserTitleHL' : 'browserTitle') + '" onClick="setTrackFromBrowser(' + i + ')">&nbsp;' + getTrackTitle(browserTitles[i]) + '&nbsp;<br>&nbsp;<smallPath>' + getTrackDir(browserCurDir) + '</smallPath></div><div class="browserAction" onClick="' + (playlistCount > 0 ? 'removeBrowserTrackFromPlaylist' : 'addTrackFromBrowser') + '(' + i + ')">' + (playlistCount > 0 ? '<div class="mark">&#9733;</div>' : '&nbsp;') + '</div></div>';
+        var isPlaying = playingTrack == browserCurDir + browserTitles[i];
+        list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromBrowser(' + i + ')">';
+        list += '<div class="item-content">';
+        list += '<div class="item-title">' + (isPlaying ? '🎵 ' : '') + getTrackTitle(browserTitles[i]) + '</div>';
+        list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
+        list += '</div>';
+        list += '<div class="item-action' + (playlistCount > 0 ? ' in-playlist' : '') + '" onClick="event.stopPropagation();' + (playlistCount > 0 ? 'removeBrowserTrackFromPlaylist' : 'addTrackFromBrowser') + '(' + i + ')">';
+        list += (playlistCount > 0 ? '⭐' : '＋');
+        list += '</div></div>';
     }
+    
+    list += '</div>';
     gebi('frameBrowser').innerHTML = list;
 }
 
 
 function updatePlaylist() {
     savePlaylist();
-    var list = '<div class="listContainer">';
+    var list = '<div class="item-list">';
+    
+    // Info banner
     if (playlistTracks.length > 0) {
-        list += '<div class="browserDir" onClick="clearPlaylist()">&nbsp;Titles in playlist: ' + String(playlistTracks.length) + ' - Click to clear';
+        list += '<div class="info-banner" onClick="clearPlaylist()">🎵 ' + String(playlistTracks.length) + ' track' + (playlistTracks.length !== 1 ? 's' : '') + ' in playlist - Click to clear</div>';
     } else {
-        list += '<div class="browserDir">&nbsp;Playlist is Empty';
+        list += '<div class="info-banner">Playlist is empty - Add tracks from Browser or Search</div>';
     }
-    list += '</div></div>';
-    list += '<div class="listContainer"><div class="browserDir" onClick="showFolderSelectDialog()">&nbsp;Add All MP3 Files to Playlist</div></div>';
+    
+    // Add all button
+    list += '<div class="list-item directory" onClick="showFolderSelectDialog()">';
+    list += '<div class="item-content"><div class="item-title">📂 Add All MP3 Files to Playlist</div></div>';
+    list += '</div>';
+    
+    // Playlist tracks
     for (var i = 0; i < playlistTracks.length; i++) {
-        list += '<div class="listContainer"><div class="' + (playingTrack == playlistTracks[i] ? 'browserTitleHL' : 'browserTitle') + '" onClick="setTrackFromPlaylist(' + i + ');player.play()">&nbsp;' + getTrackTitle(playlistTracks[i]) + '&nbsp;<br>&nbsp;<smallPath>' + getTrackDir(playlistTracks[i]) + '</smallPath></div><div class="browserAction" onClick="removeTrack(' + i + ')"><div class="mark">&#9733;</div></div></div>';
+        var isPlaying = playingTrack == playlistTracks[i];
+        list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromPlaylist(' + i + ');player.play()">';
+        list += '<div class="item-content">';
+        list += '<div class="item-title">' + (isPlaying ? '🎵 ' : '') + getTrackTitle(playlistTracks[i]) + '</div>';
+        list += '<div class="item-subtitle">' + getTrackDir(playlistTracks[i]) + '</div>';
+        list += '</div>';
+        list += '<div class="item-action in-playlist" onClick="event.stopPropagation();removeTrack(' + i + ')">⭐</div>';
+        list += '</div>';
     }
+    
+    list += '</div>';
     gebi('framePlaylist').innerHTML = list;
 }
 
@@ -424,32 +483,59 @@ function updateSearch(action) {
     if (action != undefined) {
         searchAction = action;
     }
-    var list = '<div class="pathContainer"><div class="browserPath">&nbsp;<input class="inp" value="' + (searchAction == 'clear' ? '' : searchString) + '" id="searchStr" name="searchStr" type="text"></div><div class="browserPath" onClick="searchString=gebi(\'searchStr\').value; searchForTitle(searchString); updateSearch(\'search\')"><div class="third">Title</div></div><div class="browserPath" onClick="searchString=gebi(\'searchStr\').value; searchForDir(searchString); updateSearch(\'search\')"><div class="third">Directory</div></div></div>';
-    list += '<div class="listContainer"><div class="browserDir" onClick="updateSearch(\'clear\')">';
+    var list = '<div class="item-list">';
+    
+    // Search bar
+    list += '<div class="search-bar">';
+    list += '<input class="search-input" value="' + (searchAction == 'clear' ? '' : searchString) + '" id="searchStr" name="searchStr" type="text" placeholder="Enter search term...">';
+    list += '<button class="search-btn" onClick="searchString=gebi(\'searchStr\').value; searchForTitle(searchString); updateSearch(\'search\')">Title</button>';
+    list += '<button class="search-btn" onClick="searchString=gebi(\'searchStr\').value; searchForDir(searchString); updateSearch(\'search\')">Directory</button>';
+    list += '</div>';
+    
+    // Info banner
+    var infoText = '';
     if (searchAction == 'dir') {
-        list += '&nbsp;Directory search result: ' + String(searchDirs.length);
+        infoText = '📁 Directory search: ' + String(searchDirs.length) + ' result' + (searchDirs.length !== 1 ? 's' : '');
     } else if (searchAction == 'title') {
-        list += '&nbsp;Title search result: ' + String(searchDirTracks.length);
+        infoText = '🎵 Title search: ' + String(searchDirTracks.length) + ' result' + (searchDirTracks.length !== 1 ? 's' : '');
     } else if (searchAction == 'search') {
-        list += '&nbsp;Searching...';
+        infoText = '🔍 Searching...';
         searchDirs = [];
         searchDirTracks = [];
     } else if (searchAction == 'clear') {
-        list += '&nbsp;Type and choose Title or Directory';
+        infoText = '🔍 Enter a search term and choose Title or Directory';
         searchDirs = [];
         searchDirTracks = [];
     } else {
-        list += '&nbsp;Type and choose Title or Directory';
+        infoText = '🔍 Enter a search term and choose Title or Directory';
     }
-    list += '</div></div>';
+    list += '<div class="info-banner" onClick="updateSearch(\'clear\')">' + infoText + '</div>';
+    
+    // Directory results
     for (var i = 0; i < searchDirs.length; i++) {
-        list += '<div class="listContainer"><div class="browserDir" onClick="browseDirByStr(searchDirs[' + i + '])">&nbsp;' + searchDirs[i].split('/').pop() + '&nbsp;<br>&nbsp;<smallPath>' + getTrackDir(searchDirs[i]) + '</smallPath></div></div>';
+        list += '<div class="list-item directory" onClick="browseDirByStr(searchDirs[' + i + '])">';
+        list += '<div class="item-content">';
+        list += '<div class="item-title">📁 ' + searchDirs[i].split('/').pop() + '</div>';
+        list += '<div class="item-subtitle">' + getTrackDir(searchDirs[i]) + '</div>';
+        list += '</div></div>';
     }
+    
+    // Track results
     var playlistCount;
     for (var i = 0; i < searchDirTracks.length; i++) {
         playlistCount = inPlaylist(searchDirTracks[i]);
-        list += '<div class="listContainer"><div class="' + (playingTrack == searchDirTracks[i] ? 'browserTitleHL' : 'browserTitle') + '" onClick="setTrackFromSearch(' + i + ',true)">&nbsp;' + getTrackTitle(searchDirTracks[i]) + '&nbsp;<br>&nbsp;<smallPath>' + getTrackDir(searchDirTracks[i]) + '</smallPath></div><div class="browserAction" onClick="' + (playlistCount > 0 ? 'removeSearchTrackFromPlaylist' : 'addTrackFromSearch') + '(' + i + ')">' + (playlistCount > 0 ? '<div class="mark">&#9733;</div>' : '&nbsp;') + '</div></div>';
+        var isPlaying = playingTrack == searchDirTracks[i];
+        list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromSearch(' + i + ',true)">';
+        list += '<div class="item-content">';
+        list += '<div class="item-title">' + (isPlaying ? '🎵 ' : '') + getTrackTitle(searchDirTracks[i]) + '</div>';
+        list += '<div class="item-subtitle">' + getTrackDir(searchDirTracks[i]) + '</div>';
+        list += '</div>';
+        list += '<div class="item-action' + (playlistCount > 0 ? ' in-playlist' : '') + '" onClick="event.stopPropagation();' + (playlistCount > 0 ? 'removeSearchTrackFromPlaylist' : 'addTrackFromSearch') + '(' + i + ')">';
+        list += (playlistCount > 0 ? '⭐' : '＋');
+        list += '</div></div>';
     }
+    
+    list += '</div>';
     gebi('frameSearch').innerHTML = list;
 }
 
@@ -625,29 +711,25 @@ function showTab(id) {
         }
     } else {
         tabShowing = id;
+        
+        // Remove all active states
+        gebi('frameBrowser').classList.remove('active');
+        gebi('framePlaylist').classList.remove('active');
+        gebi('frameSearch').classList.remove('active');
+        gebi('tabBrowser').classList.remove('active');
+        gebi('tabPlaylist').classList.remove('active');
+        gebi('tabSearch').classList.remove('active');
+        
+        // Add active state to selected tab
         if (id == 1) {
-            gebi('frameBrowser').style.display = 'inline';
-            gebi('framePlaylist').style.display = 'none';
-            gebi('frameSearch').style.display = 'none';
-            gebi('tabBrowser').style.background = '#ffffff';
-            gebi('tabPlaylist').style.background = '#aaaaaa';
-            gebi('tabSearch').style.background = '#aaaaaa';
-        }
-        if (id == 2) {
-            gebi('frameBrowser').style.display = 'none';
-            gebi('framePlaylist').style.display = 'inline';
-            gebi('frameSearch').style.display = 'none';
-            gebi('tabBrowser').style.background = '#aaaaaa';
-            gebi('tabPlaylist').style.background = '#ffffff';
-            gebi('tabSearch').style.background = '#aaaaaa';
-        }
-        if (id == 3) {
-            gebi('frameBrowser').style.display = 'none';
-            gebi('framePlaylist').style.display = 'none';
-            gebi('frameSearch').style.display = 'inline';
-            gebi('tabBrowser').style.background = '#aaaaaa';
-            gebi('tabPlaylist').style.background = '#aaaaaa';
-            gebi('tabSearch').style.background = '#ffffff';
+            gebi('frameBrowser').classList.add('active');
+            gebi('tabBrowser').classList.add('active');
+        } else if (id == 2) {
+            gebi('framePlaylist').classList.add('active');
+            gebi('tabPlaylist').classList.add('active');
+        } else if (id == 3) {
+            gebi('frameSearch').classList.add('active');
+            gebi('tabSearch').classList.add('active');
         }
     }
 }
