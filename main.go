@@ -556,7 +556,20 @@ var localMusicDir = os.Getenv("MUSIC_DIR") // e.g. "/mp3"
 func localList(prefix string) ([]string, []string, error) {
 	var dirs, files []string
 	base := filepath.Join(localMusicDir, prefix)
-	entries, err := os.ReadDir(base)
+	// Validate that base is inside localMusicDir (avoid path traversal)
+	rootAbs, err := filepath.Abs(localMusicDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve music dir: %w", err)
+	}
+	baseAbs, err := filepath.Abs(base)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve target dir: %w", err)
+	}
+	// Ensure the requested baseAbs is within rootAbs
+	if !strings.HasPrefix(baseAbs, rootAbs) {
+		return nil, nil, fmt.Errorf("invalid directory path: %s", prefix)
+	}
+	entries, err := os.ReadDir(baseAbs)
 	if err != nil {
 		return nil, nil, err
 	}
