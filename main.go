@@ -125,25 +125,25 @@ func audioProxyHandler(c *gin.Context) {
 	if localMusicDir != "" {
 		// For local disk, return a JSON with the local file URL
 		filePath := filepath.Join(localMusicDir, filepath.Clean(key))
-		
+
 		// Ensure the resolved path is within the music directory
 		absPath, err := filepath.Abs(filePath)
 		if err != nil {
 			c.String(http.StatusBadRequest, "Invalid path")
 			return
 		}
-		
+
 		absMusicDir, err := filepath.Abs(localMusicDir)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Server configuration error")
 			return
 		}
-		
+
 		if !strings.HasPrefix(absPath, absMusicDir) {
 			c.String(http.StatusForbidden, "Access denied")
 			return
 		}
-		
+
 		if _, err := os.Stat(absPath); err != nil {
 			c.String(http.StatusNotFound, "Audio not found")
 			return
@@ -165,33 +165,33 @@ func audioProxyHandler(c *gin.Context) {
 // Serve local files at /localdisk/*path
 func localDiskHandler(c *gin.Context) {
 	key := strings.TrimPrefix(c.Param("path"), "/")
-	
+
 	// Validate path to prevent directory traversal attacks
 	if key == "" || strings.Contains(key, "..") || strings.HasPrefix(key, "/") {
 		c.String(http.StatusBadRequest, "Invalid path")
 		return
 	}
-	
+
 	filePath := filepath.Join(localMusicDir, filepath.Clean(key))
-	
+
 	// Ensure the resolved path is within the music directory
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
 		c.String(http.StatusBadRequest, "Invalid path")
 		return
 	}
-	
+
 	absMusicDir, err := filepath.Abs(localMusicDir)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server configuration error")
 		return
 	}
-	
+
 	if !strings.HasPrefix(absPath, absMusicDir) {
 		c.String(http.StatusForbidden, "Access denied")
 		return
 	}
-	
+
 	if _, err := os.Stat(absPath); err != nil {
 		c.String(http.StatusNotFound, "Audio not found")
 		return
