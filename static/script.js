@@ -436,7 +436,7 @@ function updateBrowser() {
         list += '<div class="item-title">' + (isPlaying ? '🎵 ' : '') + getTrackTitle(browserTitles[i]) + '</div>';
         list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
         list += '</div>';
-        list += '<div class="item-action' + (playlistCount > 0 ? ' in-playlist' : '') + '" onClick="event.stopPropagation();' + (playlistCount > 0 ? 'removeBrowserTrackFromPlaylist' : 'addTrackFromBrowser') + '(' + i + ')">';
+        list += `<div class="item-action${playlistCount > 0 ? ' in-playlist' : ''}" onClick="event.stopPropagation();${playlistCount > 0 ? 'removeBrowserTrackFromPlaylist' : 'addTrackFromBrowser'}(${i})">`;
         list += (playlistCount > 0 ? '⭐' : '＋');
         list += '</div></div>';
     }
