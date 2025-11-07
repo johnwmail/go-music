@@ -46,10 +46,6 @@ jobs:
       id: go-version
       run: echo "version=$(go version | awk '{print $3}' | sed 's/go//')" >> $GITHUB_OUTPUT
 
-    - name: Clean Go modules directory
-      run: rm -rf ~/go/pkg/mod
-      continue-on-error: true
-
     - name: Cache Go modules
       uses: actions/cache@v4
       with:
