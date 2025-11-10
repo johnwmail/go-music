@@ -1,10 +1,10 @@
-name: Lint and Build
+name: Lint, Test and Build
 permissions:
   contents: read
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 concurrency:
@@ -12,8 +12,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  fmt-vet:
+    name: Format and Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+      
+      - name: Check formatting
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "The following files need formatting:"
+            gofmt -s -l .
+            exit 1
+          fi
+      
+      - name: Run go vet
+        run: go vet ./...
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: [fmt-vet]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+      
+      - name: Download dependencies
+        run: go mod download
+      
+      - name: Run unit tests
+        env:
+          MUSIC_DIR: /tmp/test-music
+          GIN_MODE: release
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      
+      - name: Generate coverage report
+        run: go tool cover -func=coverage.out
+
   lint:
     runs-on: ubuntu-latest
+    needs: [fmt-vet]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -27,6 +72,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs: [test, lint]
     strategy:
       matrix:
         goos: [linux]

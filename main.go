@@ -277,11 +277,7 @@ func handleRequest(c *gin.Context) {
 }
 
 func handleVersion(c *gin.Context) {
-	versionInfo := fmt.Sprintf("%s (%s)", Version, CommitHash)
-	if BuildTime != "unknown" {
-		versionInfo = fmt.Sprintf("%s - %s", versionInfo, BuildTime)
-	}
-	echoReqHtml(c, []interface{}{"ok", versionInfo}, "setVersion")
+	echoReqHtml(c, []interface{}{"ok", Version}, "setVersion")
 }
 
 // --- S3 Helper Functions ---

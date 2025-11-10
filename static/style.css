@@ -290,7 +290,7 @@ body {
 /* ===== Content Area ===== */
 .content {
 	position: relative;
-	height: calc(100vh - 400px);
+	height: calc(100vh - 430px);
 	overflow: hidden;
 }
 
@@ -530,7 +530,7 @@ body {
 	}
 	
 	.content {
-		height: calc(100vh - 450px);
+		height: calc(100vh - 480px);
 	}
 }
 
@@ -545,7 +545,7 @@ body {
 	}
 	
 	.content {
-		height: calc(100vh - 400px);
+		height: calc(100vh - 430px);
 	}
 }
 
@@ -577,7 +577,7 @@ body {
 	}
 	
 	.content {
-		height: calc(100vh - 420px);
+		height: calc(100vh - 450px);
 	}
 }
 
@@ -951,5 +951,49 @@ alignJumpTrack
 	.inp
 	{
 		width:19vw;
+	}
+}
+
+/* Footer */
+.footer {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	padding: 8px 16px;
+	text-align: center;
+	background: rgba(255, 255, 255, 0.95);
+	border-top: 1px solid #e0e0e0;
+	font-size: 12px;
+	z-index: 100;
+}
+
+.footer-link {
+	color: #666;
+	text-decoration: none;
+	transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+	color: #2196f3;
+}
+
+@media (max-width: 768px) {
+	.footer {
+		font-size: 11px;
+		padding: 6px 12px;
+	}
+}
+
+@media (max-width: 480px) {
+	.footer {
+		font-size: 10px;
+		padding: 4px 8px;
+	}
+	
+	.footer-link svg {
+		width: 14px;
+		height: 14px;
+		margin-right: 3px;
 	}
 }

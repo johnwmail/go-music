@@ -294,17 +294,52 @@ cd go-music
 # Install dependencies
 go mod download
 
-# Format, lint, and test
+# Run tests (no AWS credentials required)
+export MUSIC_DIR=/tmp/test-music
+export GIN_MODE=release
+go test -v ./...
+
+# Run tests with coverage
+go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+go tool cover -html=coverage.out
+
+# Format and lint
 go fmt ./...
 go vet ./...
 golangci-lint run
-go test ./...
 
 # Run locally with live reload
 go run .
 ```
 
-The CI pipeline in `.github/workflows/lint-n-build.yml` enforces code quality checks.
+### Running Tests
+
+The test suite is designed to run **without AWS/S3 credentials**. Tests use local filesystem operations and mocked dependencies:
+
+```bash
+# Run all tests
+MUSIC_DIR=/tmp/test-music GIN_MODE=release go test -v ./...
+
+# Run specific test
+MUSIC_DIR=/tmp/test-music go test -v -run TestIsAudioFile
+
+# Run with race detection
+MUSIC_DIR=/tmp/test-music go test -race ./...
+
+# Generate coverage report
+MUSIC_DIR=/tmp/test-music go test -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out
+```
+
+The tests cover:
+- ✅ Audio file detection (mp3, wav, ogg, mp4)
+- ✅ JavaScript array encoding for web UI
+- ✅ Version endpoint handler
+- ✅ Local file system operations (listing, searching)
+- ✅ Directory browsing and filtering
+- ✅ Search functionality (case-insensitive)
+
+The CI pipeline in `.github/workflows/lint-n-build.yml` enforces code quality checks and runs the full test suite automatically.
 
 ### Project Structure
 
