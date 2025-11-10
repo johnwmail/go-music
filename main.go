@@ -314,15 +314,23 @@ func handleGetAllMp3(c *gin.Context) {
 	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3Data")
 }
 
-func handleGetAllMp3InDir(c *gin.Context, dir string) {
+func handleGetAllMp3InDir(c *gin.Context, data string) {
+	// Parse the JSON-encoded directory path
+	var dir string
+	if err := json.Unmarshal([]byte(data), &dir); err != nil {
+		log.Printf("Failed to parse directory path: %v", err)
+		echoReqHtml(c, []interface{}{"error", "Invalid directory path"}, "getAllMp3InDirData")
+		return
+	}
+
 	files, err := listAllAudioFiles(dir)
 	if err != nil {
 		log.Printf("Get all mp3 in dir error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Failed to scan music directory"}, "getAllMp3Data")
+		echoReqHtml(c, []interface{}{"error", "Failed to scan music directory"}, "getAllMp3InDirData")
 		return
 	}
 	sort.Strings(files)
-	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3Data")
+	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3InDirData")
 }
 
 func handleGetAllDirs(c *gin.Context) {

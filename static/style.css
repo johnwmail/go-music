@@ -52,6 +52,33 @@ body {
 	margin: 0;
 }
 
+.header-link {
+	color: #1976d2;
+	text-decoration: none;
+	transition: color 0.3s ease;
+	display: flex;
+	align-items: center;
+}
+
+.header-link:hover {
+	color: #2196f3;
+}
+
+.header-version-link {
+	text-decoration: none;
+	transition: transform 0.2s ease;
+	display: inline-block;
+}
+
+.header-version-link:hover {
+	transform: translateY(-2px);
+}
+
+.header-version-link:hover .header-version {
+	background: rgba(33, 150, 243, 0.25);
+	border-color: rgba(33, 150, 243, 0.5);
+}
+
 .header-version {
 	font-size: 0.875rem;
 	color: #1565c0;
@@ -59,6 +86,8 @@ body {
 	padding: 0.25rem 0.75rem;
 	border-radius: 1rem;
 	border: 1px solid rgba(33, 150, 243, 0.3);
+	transition: all 0.3s ease;
+	cursor: pointer;
 }
 
 /* ===== Player Section ===== */
@@ -930,49 +959,5 @@ alignJumpTrack {
 
 	.inp {
 		width: 19vw;
-	}
-}
-
-/* Footer */
-.footer {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	padding: 8px 16px;
-	text-align: center;
-	background: rgba(255, 255, 255, 0.95);
-	border-top: 1px solid #e0e0e0;
-	font-size: 12px;
-	z-index: 100;
-}
-
-.footer-link {
-	color: #666;
-	text-decoration: none;
-	transition: color 0.2s ease;
-}
-
-.footer-link:hover {
-	color: #2196f3;
-}
-
-@media (max-width: 768px) {
-	.footer {
-		font-size: 11px;
-		padding: 6px 12px;
-	}
-}
-
-@media (max-width: 480px) {
-	.footer {
-		font-size: 10px;
-		padding: 4px 8px;
-	}
-
-	.footer-link svg {
-		width: 14px;
-		height: 14px;
-		margin-right: 3px;
 	}
 }

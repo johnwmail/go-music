@@ -780,7 +780,7 @@ function toggleFolderSelection(folder, event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    
+
     const index = selectedFolders.indexOf(folder);
     const checkboxId = folderToCheckboxId[folder];
     const checkbox = checkboxId ? document.getElementById(checkboxId) : null;
@@ -802,7 +802,52 @@ function addSelectedFoldersToPlaylist() {
     }
     closeFolderSelectDialog();
     markLoading('browser');
-    loadFromServer('getAllMp3InDirs', JSON.stringify(selectedFolders));
+
+    // Store folders to process
+    window.foldersToProcess = selectedFolders.slice();
+    window.currentFolderIndex = 0;
+
+    // Start processing first folder
+    processNextFolder();
+}
+
+function processNextFolder() {
+    if (window.currentFolderIndex >= window.foldersToProcess.length) {
+        // All done
+        loading = false;
+        markLoading(false);
+        updateAllLists();
+        delete window.foldersToProcess;
+        delete window.currentFolderIndex;
+        return;
+    }
+
+    // Process one folder
+    var folder = window.foldersToProcess[window.currentFolderIndex];
+    loadFromServer('getAllMp3InDir', JSON.stringify(folder));
+}
+
+function getAllMp3InDirData(data) {
+    loading = false;
+    markLoading(false);
+
+    if (data[0] == 'ok') {
+        // Add files from this folder to playlist
+        for (var i = 0; i < data[1].length; i++) {
+            if (inPlaylist(data[1][i]) === 0) {
+                playlistTracks.push(data[1][i]);
+            }
+        }
+        updateAllLists();
+    } else {
+        console.error('Failed to process folder:', data[1]);
+    }
+
+    // Process next folder
+    if (window.foldersToProcess) {
+        window.currentFolderIndex++;
+        setTimeout(processNextFolder, 100); // Small delay between requests
+    }
 }
 
 function closeFolderSelectDialog() {
@@ -810,6 +855,9 @@ function closeFolderSelectDialog() {
 }
 
 function getAllDirsData(data) {
+    loading = false;
+    markLoading(false);
+
     if (!folderSelectModal) return;
     const folderListDiv = document.getElementById('folderSelectList');
     if (data[0] !== 'ok') {
@@ -824,22 +872,22 @@ function getAllDirsData(data) {
     // Track used checkbox IDs to prevent conflicts
     var usedCheckboxIds = {};
     var idCounter = 0;
-    
+
     for (var i = 0; i < data[1].length; i++) {
         var folder = data[1][i];
         var displayName = (folder === '' ? 'Home' : 'Home/' + folder);
         var baseCheckboxId = 'checkbox_' + folder.replace(/[^a-zA-Z0-9]/g, '_');
         var checkboxId = baseCheckboxId;
-        
+
         // Ensure unique checkbox ID by adding counter if needed
         if (usedCheckboxIds[checkboxId]) {
             checkboxId = baseCheckboxId + '_' + (++idCounter);
         }
         usedCheckboxIds[checkboxId] = true;
-        
+
         // Store mapping from folder to checkbox ID
         folderToCheckboxId[folder] = checkboxId;
-        
+
         // Put onclick on label instead of li, and use pointer-events:none on checkbox to prevent double-clicks
         html += '<li style="margin:0.5em 0;"><label style="display:flex;align-items:center;cursor:pointer;" onclick="toggleFolderSelection(\'' + jsSingleQuoteEscape(folder) + '\', event)"><input type="checkbox" id="' + checkboxId + '" style="margin-right:0.5em;pointer-events:none;" disabled> ' + displayName + '</label></li>';
     }
