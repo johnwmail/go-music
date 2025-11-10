@@ -38,7 +38,7 @@ function getBrowserData(data) {
         browserTitles = data[3];
         updateBrowser();
         // Load version after initial directory is loaded (only on first load)
-        if (browserCurDir === '' && gebi('appVersion').textContent === 'loading ...') {
+        if (browserCurDir === '' && gebi('appVersion').textContent === 'Loading ...') {
             loadVersion();
         }
     } else {
@@ -72,36 +72,36 @@ function getSearchDir(data) {
 
 
 function init() {
-    window.onbeforeunload = function() {
+    window.onbeforeunload = function () {
         return 'Quit player?';
     };
     checkDataframe();
     showTab(1);
     markPlayingTab('');
     player = gebi('player');
-    
+
     // Show loading message in browser
     gebi('frameBrowser').innerHTML = '<div class="item-list"><div class="info-banner">Loading music library...</div></div>';
-    
+
     loadPlaylist();
     updateProgressBar();
     browseDir();
     updatePlaylist();
     updateSearch();
     // Removed loadVersion() - it was overwriting the browseDir() iframe response
-    player.onended = function() {
+    player.onended = function () {
         changeTrack(1);
     }
-    player.onpause = function() {
+    player.onpause = function () {
         gebi('buttonPlay').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
     }
-    player.onplaying = function() {
+    player.onplaying = function () {
         gebi('buttonPlay').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
     }
-    player.ontimeupdate = function() {
+    player.ontimeupdate = function () {
         updateProgressBar();
     }
-    player.onloadedmetadata = function() {
+    player.onloadedmetadata = function () {
         updateProgressBar();
     }
 }
@@ -331,11 +331,11 @@ function markPlayingTab(tab) {
     var browserMark = gebi('markBrowser');
     var listMark = gebi('markList');
     var searchMark = gebi('markSearch');
-    
+
     browserMark.classList.remove('visible');
     listMark.classList.remove('visible');
     searchMark.classList.remove('visible');
-    
+
     if (playingFrom == 'browser') {
         browserMark.classList.add('visible');
     } else if (playingFrom == 'list') {
@@ -417,7 +417,7 @@ function getTrackDir(track) {
 
 function updateBrowser() {
     var list = '<div class="item-list">';
-    
+
     // Breadcrumb navigation
     list += '<div class="breadcrumb">';
     list += '<div class="breadcrumb-item" onClick="browseDir()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Home</div>';
@@ -425,7 +425,7 @@ function updateBrowser() {
         list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + browserCurDirs[i] + '</div>';
     }
     list += '</div>';
-    
+
     // Directories
     for (var i = 0; i < browserDirs.length; i++) {
         list += '<div class="list-item directory" onClick="browseDir(' + i + ')">';
@@ -434,7 +434,7 @@ function updateBrowser() {
         list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
         list += '</div></div>';
     }
-    
+
     // Music files
     var playlistCount;
     for (var i = 0; i < browserTitles.length; i++) {
@@ -449,7 +449,7 @@ function updateBrowser() {
         list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
         list += '</div></div>';
     }
-    
+
     list += '</div>';
     gebi('frameBrowser').innerHTML = list;
 }
@@ -458,19 +458,19 @@ function updateBrowser() {
 function updatePlaylist() {
     savePlaylist();
     var list = '<div class="item-list">';
-    
+
     // Info banner
     if (playlistTracks.length > 0) {
         list += '<div class="info-banner" onClick="clearPlaylist()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' + String(playlistTracks.length) + ' track' + (playlistTracks.length !== 1 ? 's' : '') + ' in playlist - Click to clear</div>';
     } else {
         list += '<div class="info-banner">Playlist is empty - Add tracks from Browser or Search</div>';
     }
-    
+
     // Add all button
     list += '<div class="list-item directory" onClick="showFolderSelectDialog()">';
     list += '<div class="item-content"><div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg> Add All MP3 Files to Playlist</div></div>';
     list += '</div>';
-    
+
     // Playlist tracks
     for (var i = 0; i < playlistTracks.length; i++) {
         var isPlaying = playingTrack == playlistTracks[i];
@@ -482,7 +482,7 @@ function updatePlaylist() {
         list += '<div class="item-action in-playlist" onClick="event.stopPropagation();removeTrack(' + i + ')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></div>';
         list += '</div>';
     }
-    
+
     list += '</div>';
     gebi('framePlaylist').innerHTML = list;
 }
@@ -493,14 +493,14 @@ function updateSearch(action) {
         searchAction = action;
     }
     var list = '<div class="item-list">';
-    
+
     // Search bar
     list += '<div class="search-bar">';
     list += '<input class="search-input" value="' + (searchAction == 'clear' ? '' : searchString) + '" id="searchStr" name="searchStr" type="text" placeholder="Enter search term...">';
     list += '<button class="search-btn" onClick="searchString=gebi(\'searchStr\').value; searchForTitle(searchString); updateSearch(\'search\')">Title</button>';
     list += '<button class="search-btn" onClick="searchString=gebi(\'searchStr\').value; searchForDir(searchString); updateSearch(\'search\')">Directory</button>';
     list += '</div>';
-    
+
     // Info banner
     var infoText = '';
     if (searchAction == 'dir') {
@@ -519,7 +519,7 @@ function updateSearch(action) {
         infoText = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> Enter a search term and choose Title or Directory';
     }
     list += '<div class="info-banner" onClick="updateSearch(\'clear\')">' + infoText + '</div>';
-    
+
     // Directory results
     for (var i = 0; i < searchDirs.length; i++) {
         list += '<div class="list-item directory" onClick="browseDirByStr(searchDirs[' + i + '])">';
@@ -528,7 +528,7 @@ function updateSearch(action) {
         list += '<div class="item-subtitle">' + getTrackDir(searchDirs[i]) + '</div>';
         list += '</div></div>';
     }
-    
+
     // Track results
     var playlistCount;
     for (var i = 0; i < searchDirTracks.length; i++) {
@@ -543,7 +543,7 @@ function updateSearch(action) {
         list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
         list += '</div></div>';
     }
-    
+
     list += '</div>';
     gebi('frameSearch').innerHTML = list;
 }
@@ -703,7 +703,7 @@ function checkDataframe() {
             alert('Server not responding');
         }
     }
-    setTimeout(function() {
+    setTimeout(function () {
         checkDataframe();
     }, 1000);
 }
@@ -720,7 +720,7 @@ function showTab(id) {
         }
     } else {
         tabShowing = id;
-        
+
         // Remove all active states
         gebi('frameBrowser').classList.remove('active');
         gebi('framePlaylist').classList.remove('active');
@@ -728,7 +728,7 @@ function showTab(id) {
         gebi('tabBrowser').classList.remove('active');
         gebi('tabPlaylist').classList.remove('active');
         gebi('tabSearch').classList.remove('active');
-        
+
         // Add active state to selected tab
         if (id == 1) {
             gebi('frameBrowser').classList.add('active');
@@ -777,11 +777,11 @@ function toggleFolderSelection(folder) {
 
     if (index === -1) {
         selectedFolders.push(folder);
-        if(checkbox) checkbox.checked = true;
+        if (checkbox) checkbox.checked = true;
 
     } else {
         selectedFolders.splice(index, 1);
-        if(checkbox) checkbox.checked = false;
+        if (checkbox) checkbox.checked = false;
     }
 }
 

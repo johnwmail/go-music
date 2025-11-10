@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<title>Go Music Player</title>
@@ -8,6 +9,7 @@
 	<meta name="theme-color" content="#2196f3">
 	<link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body onload="init()">
 	<audio class="hideout" id="player" preload="none" tabindex="0"></audio>
 	<div class="hideout">
@@ -17,17 +19,18 @@
 		</form>
 		<iframe src="about:blank" height="0" width="0" name="dataframe"></iframe>
 	</div>
-	
+
 	<!-- Header -->
 	<header class="header">
 		<div class="header-content">
 			<h1 class="header-title">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
-					<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+					style="vertical-align: middle; margin-right: 8px;">
+					<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
 				</svg>
 				Go Music
 			</h1>
-			<div class="header-version" id="appVersion">loading ...</div>
+			<div class="header-version" id="appVersion">Loading ...</div>
 		</div>
 	</header>
 
@@ -37,46 +40,48 @@
 			<div class="track-title">No track loaded</div>
 			<div class="track-path"></div>
 		</div>
-		
+
 		<div class="time-info">
 			<span class="time-current" id="trackCurrentTime">00:00:00</span>
 			<span class="time-remaining" id="trackRemaining">00:00:00</span>
 			<span class="time-duration" id="trackDuration">00:00:00</span>
 		</div>
-		
+
 		<div class="progress-bar" id="bar"></div>
-		
+
 		<div class="controls">
 			<button class="control-btn btn-prev" onClick="changeTrack(-1);player.play()" title="Previous">
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+					<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
 				</svg>
 			</button>
-			<button class="control-btn btn-play" onClick="(player.paused?player.play():player.pause())" id="buttonPlay" title="Play/Pause">
+			<button class="control-btn btn-play" onClick="(player.paused?player.play():player.pause())" id="buttonPlay"
+				title="Play/Pause">
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M8 5v14l11-7z"/>
+					<path d="M8 5v14l11-7z" />
 				</svg>
 			</button>
 			<button class="control-btn btn-stop" onClick="playerStop()" id="buttonStop" title="Stop">
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M6 6h12v12H6z"/>
+					<path d="M6 6h12v12H6z" />
 				</svg>
 			</button>
 			<button class="control-btn btn-next" onClick="changeTrack(1);player.play()" title="Next">
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+					<path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
 				</svg>
 			</button>
 			<button class="control-btn btn-shuffle" id="shuffle" onClick="shuffleToggle()" title="Shuffle">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M21 16v5h-5"/>
-					<path d="M16 3h5v5"/>
-					<path d="M3 18 C 6 18 9 15 12 12 C 15 9 18 6 21 6"/>
-					<path d="M21 18 C 18 18 15 15 12 12 C 9 9 6 6 3 6"/>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+					stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 16v5h-5" />
+					<path d="M16 3h5v5" />
+					<path d="M3 18 C 6 18 9 15 12 12 C 15 9 18 6 21 6" />
+					<path d="M21 18 C 18 18 15 15 12 12 C 9 9 6 6 3 6" />
 				</svg>
 			</button>
 		</div>
-		
+
 		<div class="skip-controls">
 			<button class="skip-btn" onclick="skipSec(-60)">-60s</button>
 			<button class="skip-btn" onclick="skipSec(-30)">-30s</button>
@@ -94,12 +99,12 @@
 		<button class="tab" id="tabBrowser" onClick="showTab(1)">
 			<span class="tab-icon" id="markBrowser">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M8 5v14l11-7z"/>
+					<path d="M8 5v14l11-7z" />
 				</svg>
 			</span>
 			<span class="tab-loader" id="markLoadBrowser">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-					<circle cx="12" cy="12" r="8"/>
+					<circle cx="12" cy="12" r="8" />
 				</svg>
 			</span>
 			<span class="tab-label">Browser</span>
@@ -107,7 +112,7 @@
 		<button class="tab" id="tabPlaylist" onClick="showTab(2)">
 			<span class="tab-icon" id="markList">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M8 5v14l11-7z"/>
+					<path d="M8 5v14l11-7z" />
 				</svg>
 			</span>
 			<span class="tab-label">Playlist</span>
@@ -115,12 +120,12 @@
 		<button class="tab" id="tabSearch" onClick="showTab(3)">
 			<span class="tab-icon" id="markSearch">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M8 5v14l11-7z"/>
+					<path d="M8 5v14l11-7z" />
 				</svg>
 			</span>
 			<span class="tab-loader" id="markLoadSearch">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-					<circle cx="12" cy="12" r="8"/>
+					<circle cx="12" cy="12" r="8" />
 				</svg>
 			</span>
 			<span class="tab-label">Search</span>
@@ -136,5 +141,5 @@
 
 	<script src="/static/script.js"></script>
 </body>
-</html>
 
+</html>
