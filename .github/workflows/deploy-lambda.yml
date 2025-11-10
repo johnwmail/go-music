@@ -9,7 +9,7 @@ on:
         default: ""
   push:
     branches:
-      - 'deploy/lambda'
+      - "deploy/lambda"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,16 +27,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history and tags for git describe
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
-      
+          go-version-file: "go.mod"
+
       - name: Get Go version
         id: go-version
         run: echo "version=$(go version | awk '{print $3}' | sed 's/go//')" >> $GITHUB_OUTPUT
-      
+
       - name: Cache Go modules
         uses: actions/cache@v4
         with:
