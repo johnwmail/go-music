@@ -10,14 +10,15 @@ body {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+	background-attachment: fixed;
 	color: #1565c0;
-	overflow: hidden;
-	height: 100vh;
+	min-height: 100vh;
 	-webkit-touch-callout: none;
 	-webkit-user-select: none;
 	user-select: none;
 	-webkit-overflow-scrolling: touch;
 	-webkit-transform: translate3d(0, 0, 0);
+	transform: translate3d(0, 0, 0);
 }
 
 .hideout {
@@ -41,8 +42,6 @@ body {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	max-width: 1400px;
-	margin: 0 auto;
 }
 
 .header-title {
@@ -112,8 +111,6 @@ body {
 	padding: 1.5rem 1rem;
 	border-bottom: 1px solid rgba(33, 150, 243, 0.2);
 	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
-	max-width: 1400px;
-	margin: 0 auto;
 }
 
 .track-info {
@@ -229,12 +226,6 @@ body {
 	transform: scale(0.95);
 }
 
-.btn-play {
-	width: 4.5rem;
-	height: 4.5rem;
-	font-size: 2rem;
-}
-
 .btn-shuffle.active {
 	background: #2196f3;
 	color: #ffffff;
@@ -274,8 +265,6 @@ body {
 	background: rgba(255, 255, 255, 0.95);
 	border-bottom: 2px solid rgba(33, 150, 243, 0.2);
 	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
-	max-width: 1400px;
-	margin: 0 auto;
 }
 
 .tab {
@@ -344,10 +333,8 @@ body {
 /* ===== Content Area ===== */
 .content {
 	position: relative;
-	height: calc(100vh - 430px);
+	min-height: 400px;
 	overflow: hidden;
-	max-width: 1400px;
-	margin: 0 auto;
 }
 
 .content-frame {
@@ -614,12 +601,6 @@ body {
 		width: 3rem;
 		height: 3rem;
 		font-size: 1.25rem;
-	}
-
-	.btn-play {
-		width: 4rem;
-		height: 4rem;
-		font-size: 1.75rem;
 	}
 
 	.skip-btn {
