@@ -19,9 +19,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
           version: latest
 
@@ -36,12 +36,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
-      
+          go-version-file: "go.mod"
+
       - name: Get Go version
         id: go-version
         run: echo "version=$(go version | awk '{print $3}' | sed 's/go//')" >> $GITHUB_OUTPUT
-      
+
       - name: Cache Go modules
         uses: actions/cache@v4
         with:
@@ -51,7 +51,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ steps.go-version.outputs.version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ steps.go-version.outputs.version }}-
-      
+
       - name: Build binary
         run: |
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
