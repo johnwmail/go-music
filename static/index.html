@@ -9,7 +9,7 @@
 	<link rel="stylesheet" href="/static/style.css">
 </head>
 <body onload="init()">
-	<audio class="hideout" autoplay id="player" preload="auto" tabindex="0"></audio>
+	<audio class="hideout" id="player" preload="none" tabindex="0"></audio>
 	<div class="hideout">
 		<form id="dfform" target="dataframe" action="/api" method="post">
 			<input type="hidden" name="dffunc" id="dffunc" value="">
@@ -21,7 +21,12 @@
 	<!-- Header -->
 	<header class="header">
 		<div class="header-content">
-			<h1 class="header-title">🎵 Go Music</h1>
+			<h1 class="header-title">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
+					<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+				</svg>
+				Go Music
+			</h1>
 			<div class="header-version" id="appVersion">v1.0.0</div>
 		</div>
 	</header>
@@ -43,19 +48,29 @@
 		
 		<div class="controls">
 			<button class="control-btn btn-prev" onClick="changeTrack(-1);player.play()" title="Previous">
-				<span>⏮</span>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+				</svg>
 			</button>
 			<button class="control-btn btn-play" onClick="(player.paused?player.play():player.pause())" id="buttonPlay" title="Play/Pause">
-				<span>▶</span>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z"/>
+				</svg>
 			</button>
 			<button class="control-btn btn-stop" onClick="playerStop()" id="buttonStop" title="Stop">
-				<span>⏹</span>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M6 6h12v12H6z"/>
+				</svg>
 			</button>
 			<button class="control-btn btn-next" onClick="changeTrack(1);player.play()" title="Next">
-				<span>⏭</span>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+				</svg>
 			</button>
 			<button class="control-btn btn-shuffle" id="shuffle" onClick="shuffleToggle()" title="Shuffle">
-				<span>🔀</span>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+				</svg>
 			</button>
 		</div>
 		
@@ -74,17 +89,37 @@
 	<!-- Navigation Tabs -->
 	<nav class="tabs">
 		<button class="tab" id="tabBrowser" onClick="showTab(1)">
-			<span class="tab-icon" id="markBrowser">▶</span>
-			<span class="tab-loader" id="markLoadBrowser">●</span>
+			<span class="tab-icon" id="markBrowser">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z"/>
+				</svg>
+			</span>
+			<span class="tab-loader" id="markLoadBrowser">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<circle cx="12" cy="12" r="8"/>
+				</svg>
+			</span>
 			<span class="tab-label">Browser</span>
 		</button>
 		<button class="tab" id="tabPlaylist" onClick="showTab(2)">
-			<span class="tab-icon" id="markList">▶</span>
+			<span class="tab-icon" id="markList">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z"/>
+				</svg>
+			</span>
 			<span class="tab-label">Playlist</span>
 		</button>
 		<button class="tab" id="tabSearch" onClick="showTab(3)">
-			<span class="tab-icon" id="markSearch">▶</span>
-			<span class="tab-loader" id="markLoadSearch">●</span>
+			<span class="tab-icon" id="markSearch">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z"/>
+				</svg>
+			</span>
+			<span class="tab-loader" id="markLoadSearch">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<circle cx="12" cy="12" r="8"/>
+				</svg>
+			</span>
 			<span class="tab-label">Search</span>
 		</button>
 	</nav>

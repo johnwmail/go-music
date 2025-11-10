@@ -272,14 +272,14 @@ body {
 
 .tab-loader {
 	font-size: 1.25rem;
-	opacity: 0;
+	display: none;
 	position: absolute;
 	right: 0.75rem;
-	animation: blink 1s linear infinite;
 }
 
 .tab-loader.visible {
-	opacity: 1;
+	display: block;
+	animation: blink 1s linear infinite;
 }
 
 @keyframes blink {
