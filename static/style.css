@@ -301,10 +301,11 @@ body {
 /* ===== Content Area ===== */
 .content {
 	position: relative;
-	height: calc(100vh - 430px);
+	height: calc(100vh - 430px - 32px);
 	overflow: hidden;
 	max-width: 1400px;
 	margin: 0 auto;
+	margin-bottom: 32px;
 }
 
 .content-frame {
@@ -543,7 +544,7 @@ body {
 	}
 
 	.content {
-		height: calc(100vh - 480px);
+		height: calc(100vh - 480px - 32px);
 	}
 }
 
@@ -553,7 +554,7 @@ body {
 	}
 
 	.content {
-		height: calc(100vh - 430px);
+		height: calc(100vh - 430px - 32px);
 	}
 }
 
@@ -585,7 +586,7 @@ body {
 	}
 
 	.content {
-		height: calc(100vh - 450px);
+		height: calc(100vh - 450px - 20px);
 	}
 }
 
@@ -962,12 +963,20 @@ alignJumpTrack {
 		font-size: 11px;
 		padding: 6px 12px;
 	}
+
+	.content {
+		margin-bottom: 26px;
+	}
 }
 
 @media (max-width: 480px) {
 	.footer {
 		font-size: 10px;
 		padding: 4px 8px;
+	}
+
+	.content {
+		margin-bottom: 20px;
 	}
 
 	.footer-link svg {
