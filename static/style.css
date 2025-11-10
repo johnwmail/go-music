@@ -69,6 +69,8 @@ body {
 	padding: 1.5rem 1rem;
 	border-bottom: 1px solid rgba(33, 150, 243, 0.2);
 	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+	max-width: 1400px;
+	margin: 0 auto;
 }
 
 .track-info {
@@ -229,6 +231,8 @@ body {
 	background: rgba(255, 255, 255, 0.95);
 	border-bottom: 2px solid rgba(33, 150, 243, 0.2);
 	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+	max-width: 1400px;
+	margin: 0 auto;
 }
 
 .tab {
@@ -292,6 +296,8 @@ body {
 	position: relative;
 	height: calc(100vh - 430px);
 	overflow: hidden;
+	max-width: 1400px;
+	margin: 0 auto;
 }
 
 .content-frame {
@@ -535,11 +541,6 @@ body {
 }
 
 @media (min-width: 1024px) {
-	.player-section {
-		max-width: 1400px;
-		margin: 0 auto;
-	}
-	
 	.skip-controls {
 		gap: 0.75rem;
 	}
