@@ -38,7 +38,7 @@ function getBrowserData(data) {
         browserTitles = data[3];
         updateBrowser();
         // Load version after initial directory is loaded (only on first load)
-        if (browserCurDir === '' && gebi('appVersion').textContent === 'v1.0.0') {
+        if (browserCurDir === '' && gebi('appVersion').textContent === 'loading ...') {
             loadVersion();
         }
     } else {
