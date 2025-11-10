@@ -530,7 +530,7 @@ body {
 	}
 	
 	.content {
-		height: calc(100vh - 450px);
+		height: calc(100vh - 480px);
 	}
 }
 
@@ -545,7 +545,7 @@ body {
 	}
 	
 	.content {
-		height: calc(100vh - 400px);
+		height: calc(100vh - 430px);
 	}
 }
 
@@ -577,7 +577,7 @@ body {
 	}
 	
 	.content {
-		height: calc(100vh - 420px);
+		height: calc(100vh - 450px);
 	}
 }
 
@@ -982,5 +982,18 @@ alignJumpTrack
 	.footer {
 		font-size: 11px;
 		padding: 6px 12px;
+	}
+}
+
+@media (max-width: 480px) {
+	.footer {
+		font-size: 10px;
+		padding: 4px 8px;
+	}
+	
+	.footer-link svg {
+		width: 14px;
+		height: 14px;
+		margin-right: 3px;
 	}
 }
