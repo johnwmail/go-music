@@ -112,6 +112,8 @@ function loadVersion() {
 }
 
 function setVersion(data) {
+    loading = false;
+    markLoading(false);
     if (data[0] === 'ok' && data[1]) {
         gebi('appVersion').textContent = data[1];
     }
