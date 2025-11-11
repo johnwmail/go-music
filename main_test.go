@@ -57,51 +57,8 @@ func TestIsAudioFile(t *testing.T) {
 }
 
 // TestEa tests the JavaScript array encoding function
-func TestEa(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []interface{}
-		expected string
-	}{
-		{
-			name:     "Simple strings",
-			input:    []interface{}{"ok", "test"},
-			expected: `["ok","test"]`,
-		},
-		{
-			name:     "String array",
-			input:    []interface{}{"ok", []string{"file1", "file2"}},
-			expected: `["ok",["file1","file2"]]`,
-		},
-		{
-			name:     "Empty array",
-			input:    []interface{}{"ok", []string{}},
-			expected: `["ok",[]]`,
-		},
-		{
-			name:     "String with quotes",
-			input:    []interface{}{"He said \"hello\""},
-			expected: `["He said \\"hello\\""]`,
-		},
-		{
-			name:     "Array with quoted strings",
-			input:    []interface{}{[]string{"song \"A\"", "song \"B\""}},
-			expected: `[["song \\"A\\"","song \\"B\\""]]`,
-		},
-		{
-			name:     "Multiple arrays",
-			input:    []interface{}{"ok", "", []string{"dir1", "dir2"}, []string{}},
-			expected: `["ok","",["dir1","dir2"],[]]`,
-		},
-	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ea(tt.input)
-			assert.Equal(t, tt.expected, got)
-		})
-	}
-}
+// (removed TestEa and its test-local ea implementation because the helper was removed from production code)
 
 // TestHandleVersion tests the version endpoint
 func TestHandleVersion(t *testing.T) {

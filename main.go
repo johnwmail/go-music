@@ -528,30 +528,6 @@ func searchDirs(term string) ([]string, error) {
 	return s3SearchDirs(term)
 }
 
-func echoReqHtml(c *gin.Context, data []interface{}, funcName string) {
-	c.Header("Content-Type", "text/html; charset="+CHARSET)
-	c.String(http.StatusOK, `<!DOCTYPE html><html><head><meta charset="UTF-8"><script>var dataContainer = `+ea(data)+`;</script></head><body onload="parent.`+funcName+`(dataContainer)"></body></html>`)
-}
-
-func ea(varData []interface{}) string {
-	res := ""
-	for i, v := range varData {
-		if i > 0 {
-			res += ","
-		}
-		if arr, ok := v.([]string); ok {
-			var quotedItems []string
-			for _, item := range arr {
-				quotedItems = append(quotedItems, `"`+strings.ReplaceAll(item, `"`, `\\"`)+`"`)
-			}
-			res += "[" + strings.Join(quotedItems, ",") + "]"
-		} else {
-			res += `"` + strings.ReplaceAll(fmt.Sprint(v), `"`, `\\"`) + `"`
-		}
-	}
-	return "[" + res + "]"
-}
-
 // --- Placeholder handlers from original code ---
 // It's good practice to ensure all called functions exist.
 
