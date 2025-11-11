@@ -15,18 +15,52 @@ var playingTrack = '';
 var lastProgress = -1;
 var tabShowing = 0;
 var loading = false;
-var dataframeTime = 0;
 var searchString = '';
 var searchAction = '';
 var shuffledList = [];
 var shuffle = false;
 
 
+// Modern fetch API function to replace iframe-based loadFromServer
+async function fetchAPI(functionName, data) {
+    loading = true;
+    markLoading(functionName === 'dir' ? 'browser' : functionName.includes('search') ? 'search' : false);
+
+    try {
+        const response = await fetch('/api', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                function: functionName,
+                data: data
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        loading = false;
+        markLoading(false);
+        return result;
+    } catch (error) {
+        loading = false;
+        markLoading(false);
+        console.error('[fetchAPI] Error:', error);
+        alert('Server not responding: ' + error.message);
+        return { status: 'error', message: error.message };
+    }
+}
+
+
 function getBrowserData(data) {
     loading = false;
     markLoading(false);
-    if (String(data[0]) == 'ok') {
-        browserCurDir = (String(data[1]));
+    if (data.status === 'ok') {
+        browserCurDir = String(data.dir);
         var tmpArr = browserCurDir.split('/');
         browserCurDirs = [];
         for (var i = 0; i < tmpArr.length; i++) {
@@ -34,15 +68,15 @@ function getBrowserData(data) {
                 browserCurDirs[browserCurDirs.length] = tmpArr[i];
             }
         }
-        browserDirs = data[2];
-        browserTitles = data[3];
+        browserDirs = data.dirs || [];
+        browserTitles = data.files || [];
         updateBrowser();
         // Load version after initial directory is loaded (only on first load)
         if (browserCurDir === '' && gebi('appVersion').textContent === 'Loading ...') {
             loadVersion();
         }
     } else {
-        alert(data[0]);
+        alert(data.message || 'Error loading directory');
     }
 }
 
@@ -51,10 +85,10 @@ function getSearchTitle(data) {
     loading = false;
     markLoading(false);
     searchDirs = [];
-    searchDirTracks = data[1];
+    searchDirTracks = data.titles || [];
     updateSearch('title');
-    if (data[0] != '') {
-        alert(data[0]);
+    if (data.status === 'error' && data.message) {
+        alert(data.message);
     }
 }
 
@@ -63,10 +97,10 @@ function getSearchDir(data) {
     loading = false;
     markLoading(false);
     searchDirTracks = [];
-    searchDirs = data[1];
+    searchDirs = data.dirs || [];
     updateSearch('dir');
-    if (data[0] != '') {
-        alert(data[0]);
+    if (data.status === 'error' && data.message) {
+        alert(data.message);
     }
 }
 
@@ -75,7 +109,6 @@ function init() {
     window.onbeforeunload = function () {
         return 'Quit player?';
     };
-    checkDataframe();
     showTab(1);
     markPlayingTab('');
     player = gebi('player');
@@ -88,7 +121,6 @@ function init() {
     browseDir();
     updatePlaylist();
     updateSearch();
-    // Removed loadVersion() - it was overwriting the browseDir() iframe response
     player.onended = function () {
         changeTrack(1);
     }
@@ -106,16 +138,19 @@ function init() {
     }
 }
 
-function loadVersion() {
-    // Load version information from the server API
-    loadFromServer('version', '');
+async function loadVersion() {
+    const data = await fetchAPI('version', '');
+    if (data.status === 'ok' && data.version) {
+        gebi('appVersion').textContent = data.version;
+    }
 }
 
 function setVersion(data) {
+    // Kept for compatibility, but now handled directly in loadVersion
     loading = false;
     markLoading(false);
-    if (data[0] === 'ok' && data[1]) {
-        gebi('appVersion').textContent = data[1];
+    if (data.status === 'ok' && data.version) {
+        gebi('appVersion').textContent = data.version;
     }
 }
 
@@ -628,86 +663,60 @@ function removeTrack(id) {
 }
 
 
-function searchForTitle(search) {
+async function searchForTitle(search) {
     markLoading('search');
-    loadFromServer('searchTitle', search);
+    const data = await fetchAPI('searchTitle', search);
+    getSearchTitle(data);
 }
 
 
-function searchForDir(search) {
+async function searchForDir(search) {
     markLoading('search');
-    loadFromServer('searchDir', search);
+    const data = await fetchAPI('searchDir', search);
+    getSearchDir(data);
 }
 
 
-function browseDirFromBreadCrumbBar(id) {
+async function browseDirFromBreadCrumbBar(id) {
     var dir = '';
     for (var i = 0; i <= id; i++) {
         dir += browserCurDirs[i] + '/';
     }
     markLoading('browser');
-    loadFromServer('dir', dir);
+    const data = await fetchAPI('dir', dir);
+    getBrowserData(data);
 }
 
 
-function browseDir(id) {
+async function browseDir(id) {
     var dir = '';
     if (id !== undefined) {
         dir += browserCurDir + browserDirs[id] + '/';
     }
     markLoading('browser');
-    loadFromServer('dir', dir);
+    const data = await fetchAPI('dir', dir);
+    getBrowserData(data);
 }
 
 
-function browseDirByStr(str) {
+async function browseDirByStr(str) {
     markLoading('browser');
-    loadFromServer('dir', str + '/');
+    const data = await fetchAPI('dir', str + '/');
+    getBrowserData(data);
     tabShowing = 0;
     showTab(1);
 }
 
 
-function getPlayingDir() {
+async function getPlayingDir() {
     if (playingTrack !== '') {
         var path = playingTrack.substr(0, playingTrack.lastIndexOf('/')) + '/';
         markLoading('browser');
-        loadFromServer('dir', path);
+        const data = await fetchAPI('dir', path);
+        getBrowserData(data);
         tabShowing = 0;
         showTab(1);
     }
-}
-
-
-function loadFromServer(param, varia) {
-    dataframeTime = 15;
-    loading = true;
-    gebi('dffunc').value = param;
-    gebi('dfdata').value = varia;
-    gebi('dfform').submit();
-}
-
-
-function checkDataframe() {
-    if (loading) {
-        if (dataframeTime > 0) {
-            dataframeTime--;
-        } else {
-            loading = false;
-            markLoading(false);
-            try {
-                if (window.frames['dataframe'] && window.frames['dataframe'].window) {
-                    window.frames['dataframe'].window.location.replace('about:blank');
-                }
-            } catch (e) {
-                console.error("Error accessing iframe:", e);
-            }
-            alert('Server not responding');
-        }
-    }
-    setTimeout(function () {
-        checkDataframe();
-    }, 1000);
 }
 
 
@@ -750,7 +759,7 @@ var folderSelectModal = null;
 var selectedFolders = [];
 var folderToCheckboxId = {}; // Map folder names to their checkbox IDs
 
-function showFolderSelectDialog() {
+async function showFolderSelectDialog() {
     selectedFolders = [];
     folderToCheckboxId = {}; // Reset mapping
     if (!folderSelectModal) {
@@ -771,7 +780,8 @@ function showFolderSelectDialog() {
     }
     folderSelectModal.style.display = 'flex';
     // Fetch folders from backend
-    loadFromServer('getAllDirs', '');
+    const data = await fetchAPI('getAllDirs', '');
+    getAllDirsData(data);
 }
 
 function toggleFolderSelection(folder, event) {
@@ -811,7 +821,7 @@ function addSelectedFoldersToPlaylist() {
     processNextFolder();
 }
 
-function processNextFolder() {
+async function processNextFolder() {
     if (window.currentFolderIndex >= window.foldersToProcess.length) {
         // All done
         loading = false;
@@ -824,23 +834,24 @@ function processNextFolder() {
 
     // Process one folder
     var folder = window.foldersToProcess[window.currentFolderIndex];
-    loadFromServer('getAllMp3InDir', JSON.stringify(folder));
+    const data = await fetchAPI('getAllMp3InDir', JSON.stringify(folder));
+    getAllMp3InDirData(data);
 }
 
 function getAllMp3InDirData(data) {
     loading = false;
     markLoading(false);
 
-    if (data[0] == 'ok') {
+    if (data.status === 'ok' && data.files) {
         // Add files from this folder to playlist
-        for (var i = 0; i < data[1].length; i++) {
-            if (inPlaylist(data[1][i]) === 0) {
-                playlistTracks.push(data[1][i]);
+        for (var i = 0; i < data.files.length; i++) {
+            if (inPlaylist(data.files[i]) === 0) {
+                playlistTracks.push(data.files[i]);
             }
         }
         updateAllLists();
     } else {
-        console.error('Failed to process folder:', data[1]);
+        console.error('Failed to process folder:', data.message);
     }
 
     // Process next folder
@@ -860,7 +871,7 @@ function getAllDirsData(data) {
 
     if (!folderSelectModal) return;
     const folderListDiv = document.getElementById('folderSelectList');
-    if (data[0] !== 'ok') {
+    if (data.status !== 'ok' || !data.dirs) {
         folderListDiv.innerHTML = 'Failed to load folders.';
         return;
     }
@@ -873,8 +884,8 @@ function getAllDirsData(data) {
     var usedCheckboxIds = {};
     var idCounter = 0;
 
-    for (var i = 0; i < data[1].length; i++) {
-        var folder = data[1][i];
+    for (var i = 0; i < data.dirs.length; i++) {
+        var folder = data.dirs[i];
         var displayName = (folder === '' ? 'Home' : 'Home/' + folder);
         var baseCheckboxId = 'checkbox_' + folder.replace(/[^a-zA-Z0-9]/g, '_');
         var checkboxId = baseCheckboxId;
@@ -898,14 +909,14 @@ function getAllDirsData(data) {
 function getAllMp3Data(data) {
     loading = false;
     markLoading(false);
-    if (data[0] == 'ok') {
-        for (var i = 0; i < data[1].length; i++) {
-            if (inPlaylist(data[1][i]) === 0) {
-                playlistTracks.push(data[1][i]);
+    if (data.status === 'ok' && data.files) {
+        for (var i = 0; i < data.files.length; i++) {
+            if (inPlaylist(data.files[i]) === 0) {
+                playlistTracks.push(data.files[i]);
             }
         }
         updateAllLists();
     } else {
-        alert('Failed to add files: ' + data[1]);
+        alert('Failed to add files: ' + (data.message || 'Unknown error'));
     }
 }
