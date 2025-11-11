@@ -1,8 +1,7 @@
 # go-music
 
-[![Build](https://github.com/johnwmail/go-music/workflows/Build/badge.svg)](https://github.com/johnwmail/go-music/actions/workflows/lint-n-build.yml)
-[![Container](https://github.com/johnwmail/go-music/workflows/Container/badge.svg)](https://github.com/johnwmail/go-music/actions/workflows/container.yml)
-[![Security](https://github.com/johnwmail/go-music/workflows/Run%20Gosec%20Security%20Scan/badge.svg)](https://github.com/johnwmail/go-music/actions/workflows/gosec.yml)
+[![Test](https://github.com/johnwmail/go-music/workflows/Test/badge.svg)](https://github.com/johnwmail/go-music/actions/workflows/test.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/johnwmail/go-music)](https://goreportcard.com/report/github.com/johnwmail/go-music)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/release/johnwmail/go-music.svg)](https://github.com/johnwmail/go-music/releases)
 [![Go Version](https://img.shields.io/badge/go-1.24+-blue.svg)](go.mod)
