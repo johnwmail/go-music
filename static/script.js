@@ -145,15 +145,6 @@ async function loadVersion() {
     }
 }
 
-function setVersion(data) {
-    // Kept for compatibility, but now handled directly in loadVersion
-    loading = false;
-    markLoading(false);
-    if (data.status === 'ok' && data.version) {
-        gebi('appVersion').textContent = data.version;
-    }
-}
-
 
 function markLoading(tab) {
     var browserLoader = gebi('markLoadBrowser');

@@ -47,228 +47,120 @@ This document describes the migration from the legacy iframe-based API communica
 #### Updated Functions3. **Updated all API handlers** - Return proper JSON instead of HTML with embedded JavaScript
 
 All functions that previously called `loadFromServer()` now use `fetchAPI()`:   - `handleVersion` → Returns `{status: "ok", data: "version"}`
+ # Migration: iframe → Fetch API
 
-- `browseDir()` - Browse music directories   - `handleGetAllMp3` → Returns `{status: "ok", data: [files]}`
+ ## Summary
 
-- `browseDirFromBreadCrumbBar()` - Navigate via breadcrumbs   - `handleGetAllMp3InDir` → Returns `{status: "ok", data: [files]}`
+ This document summarizes the migration from the legacy iframe/form-based frontend API integration to a modern Fetch API approach. The change simplifies client-server communication by using standard JSON requests and responses, removes fragile iframe callbacks, and improves maintainability and reliability (particularly for Lambda deployments).
 
-- `browseDirByStr()` - Browse by path string   - `handleGetAllDirs` → Returns `{status: "ok", data: [dirs]}`
+ ## Goals
 
-- `getPlayingDir()` - Navigate to currently playing track's directory   - `handleDirRequest` → Returns `{status: "ok", data: {dir, dirs, files}}`
+ - Replace iframe/form callbacks with Fetch-based API calls.
+ - Standardize request/response shapes as JSON objects.
+ - Keep backward compatibility during the migration where practical.
+ - Remove dead helpers that were specific to the iframe approach.
 
-- `searchForTitle()` - Search by song title   - `handleSearchTitle` → Returns `{status: "ok", data: [titles]}`
+ ## What changed (high level)
 
-- `searchForDir()` - Search by directory name   - `handleSearchDir` → Returns `{status: "ok", data: [dirs]}`
+ - Frontend now uses an async `fetchAPI(functionName, data)` wrapper to call `/api`.
+ - Backend `handleRequest` accepts JSON bodies and still falls back to form parsing for legacy compatibility.
+ - All handlers return JSON objects instead of HTML pages that contain JavaScript callbacks.
+ - Hidden iframe, form inputs, and related helper plumbing were removed from the frontend.
+ - A few small compatibility helpers were removed from the codebase (see "Removed functions" below).
 
-- `loadVersion()` - Load app version   - `handleGetAllMp3InDirs` → Returns `{status: "ok", data: [files]}`
+ ## Key differences (request/response shapes)
 
-- `showFolderSelectDialog()` - Load folder list for selection
+ - Old (iframe): responses were returned in HTML with embedded JavaScript and callback invocation like parent.cb([...]) or used custom array formats.
+ - New (fetch): responses are JSON objects, e.g. `{ "status": "ok", "files": [...] }` or `{ "status": "ok", "dir": "...", "dirs": [...], "files": [...] }`.
 
-- `processNextFolder()` - Process folders sequentially4. **Removed deprecated functions**
+ Frontend code now expects and handles these JSON objects directly.
 
-   - Removed `echoReqHtml()` - HTML generation with embedded callbacks
+ ## Removed / cleaned up
 
-#### Updated Callback Functions   - Removed `ea()` - JavaScript array encoding helper
+ These helpers were specific to the iframe callback approach and were removed to reduce dead code:
 
-All callback functions now handle the new JSON response format:
+ - `echoReqHtml()` — HTML wrapper used to execute parent callbacks from an iframe.
+ - `ea()` — JS helper that encoded arrays into a string for embedding in HTML callback arguments.
+ - `setVersion()` (frontend) — compatibility wrapper; version rendering is handled directly by `loadVersion()` now.
 
-- `getBrowserData()` - Changed from array format `[status, dir, dirs, files]` to object `{status, dir, dirs, files}`### Frontend (static/index.html)
+ In Go code, leftover helpers used only for the iframe flow were also removed.
 
-- `getSearchTitle()` - Changed from `[status, titles]` to `{status, titles}`
+ ## Notable updated handlers (backend)
 
-- `getSearchDir()` - Changed from `[status, dirs]` to `{status, dirs}`1. **Removed iframe infrastructure**
+ - `handleRequest` — accepts JSON (`Content-Type: application/json`) and falls back to form parsing if needed. It dispatches on the request `function` field and returns JSON.
+ - `handleVersion` — returns `{status: "ok", "version": "..."}`.
+ - `handleDirRequest`, `handleGetAllMp3`, `handleGetAllMp3InDir`, `handleGetAllDirs`, `handleGetAllMp3InDirs`, `handleSearchTitle`, `handleSearchDir` — all return consistent JSON shapes.
 
-- `getAllDirsData()` - Changed from `[status, dirs]` to `{status, dirs}`   - Removed hidden iframe element
+ The backend changes are focused on returning proper JSON and preserving behaviors (directory listing, searches, presigned URLs for S3, or local-file routing).
 
-- `getAllMp3InDirData()` - Changed from `[status, files]` to `{status, files}`   - Removed hidden form (`dfform`)
+ ## Frontend changes (static/script.js)
 
-- `getAllMp3Data()` - Changed from `[status, files]` to `{status, files}`   - Removed form input fields (`dffunc`, `dfdata`)
+ - New `fetchAPI()` async wrapper that sends JSON and parses JSON responses.
+ - `loadVersion()` is async and updates the version DOM element directly.
+ - UI callbacks (`getBrowserData`, `getSearchTitle`, `getSearchDir`, etc.) now accept JSON objects and handle them without iframe callbacks.
 
-- `setVersion()` - Changed from `[status, version]` to `{status, version}`
+ ## Backward compatibility
 
-### Frontend (static/script.js)
+ - During migration, the backend still accepts form-encoded requests (legacy) so you can deploy the backend before the frontend.
+ - After migration stabilizes, the fallback form parsing can be removed for simplification.
 
-### 2. Backend (Go)
+ ## Benefits
 
-1. **Added callAPI function** - Modern async/await API wrapper
+ - Simpler and clearer code (no HTML generation for data transport).
+ - Easier debugging in browser DevTools (JSON is visible in Network tab).
+ - Better reliability when deploying to serverless platforms (Lambda + API Gateway).
+ - Cleaner API contract between frontend and backend.
 
-#### Updated API Handler   ```javascript
+ ## Testing checklist
 
-- **`handleRequest()`**: Now accepts both JSON (new) and form data (legacy) for backward compatibility during migration   async function callAPI(functionName, data = '') {
+ Run these locally before/after deployment:
 
-  - Reads request body as JSON first       // Uses fetch() with JSON request/response
+ - [x] Directory browsing (browse directories and see file lists)
+ - [x] Version loads and displays in the UI
+ - [x] Search by title (results show expected matches)
+ - [x] Search by directory (results show expected matches)
+ - [x] Get all MP3(s) and per-directory MP3 listings
+ - [x] Audio playback (play, pause, next/prev, progress)
 
-  - Falls back to form data if JSON parsing fails       // Automatic error handling
+ Local test commands that are useful:
 
-  - Uses consistent struct `{function, data}` for all requests       // Loading state management
+ ```bash
+ # build
+ go build -v -ldflags="-w -s -X 'main.Version=dev'" -o go-music .
+ # run
+ MUSIC_DIR=./mp3 ./go-music
+ # open
+ http://localhost:8080
+ ```
 
-   }
+ - Run unit tests (uses MUSIC_DIR to avoid S3 init):
 
-#### Updated Response Handlers   ```
+ ```bash
+ MUSIC_DIR=/tmp/gotest go test -v
+ ```
 
-All handlers now return proper JSON responses using `c.JSON()`:
+ ## Rollback plan
 
-- `handleVersion()` - Returns `{status: "ok", version: "..."}`2. **Converted all callback functions to async**
+ If issues are discovered, you can revert to a commit before the migration and redeploy. All previous iframe-based code remains available in git history.
 
-- `handleGetAllMp3()` - Returns `{status: "ok", files: [...]}`   - `getBrowserData(dir)` - Now takes dir parameter, calls API directly
+ ## Code cleanup opportunities (post-migration)
 
-- `handleGetAllMp3InDir()` - Returns `{status: "ok", files: [...]}`   - `getSearchTitle(searchStr)` - Now takes search string, calls API directly
+ Once the new fetch-based flow is stable, consider removing:
 
-- `handleGetAllDirs()` - Returns `{status: "ok", dirs: [...]}`   - `getSearchDir(searchStr)` - Now takes search string, calls API directly
+ 1. Form-data fallback parsing in `handleRequest()`.
+ 2. Any leftover iframe/form DOM elements in `static/index.html`.
+ 3. Any migration-only comments or shim helpers in the codebase.
 
-- `handleDirRequest()` - Returns `{status: "ok", dir: "...", dirs: [...], files: [...]}`   - `getAllDirsData()` - Now async, calls API and processes response
+ ## Notes about `setVersion()`
 
-- `handleSearchTitle()` - Returns `{status: "ok", titles: [...]}`   - `getAllMp3Data()` - Now async, calls API and adds to playlist
+ `setVersion()` (a small frontend compatibility helper used in the iframe approach) was removed from `static/script.js`. The async `loadVersion()` function now updates the UI directly. `MIGRATION.md` and other docs were updated to note this removal.
 
-- `handleSearchDir()` - Returns `{status: "ok", dirs: [...]}`   - `processNextFolder()` - Now async with proper await
+ ## Next steps
 
-- `handleGetAllMp3InDirs()` - Returns `{status: "ok", files: [...]}`
+ - Verify the application behavior in a staging environment (Lambda or local) and run the testing checklist above.
+ - If everything is stable for a few deploy cycles, remove legacy fallbacks and migration notes.
+ - Consider adding a small section in the README summarizing how the API expects to be called (JSON `{function, data}`) so future contributors understand the contract.
 
-3. **Updated helper functions**
+ ## Conclusion
 
-#### Legacy Support   - `loadVersion()` - Now async, no longer needs callback
-
-- **`echoReqHtml()` function**: Still present but no longer used   - `searchForTitle()` - Calls async getSearchTitle
-
-  - Can be removed in a future cleanup   - `searchForDir()` - Calls async getSearchDir
-
-  - Kept for reference during migration   - `browseDir()` - Calls async getBrowserData
-
-   - `browseDirFromBreadCrumbBar()` - Calls async getBrowserData
-
-## Benefits   - `browseDirByStr()` - Calls async getBrowserData
-
-   - `getPlayingDir()` - Calls async getBrowserData
-
-### 1. Modern Standards
-
-- Uses standard Fetch API (widely supported in all modern browsers)4. **Removed deprecated functions**
-
-- Cleaner async/await syntax instead of callback-based iframe approach   - Removed `loadFromServer()` - iframe form submission
-
-- Proper JSON request/response format   - Removed `checkDataframe()` - iframe timeout checker
-
-   - Removed `setVersion()` - callback wrapper
-
-### 2. Better Performance   - Removed `dataframeTime` variable - no longer needed
-
-- No iframe overhead (DOM manipulation, iframe loading)
-
-- Direct HTTP requests without intermediate HTML rendering## Benefits
-
-- Faster response time without HTML wrapper parsing
-
-### Code Quality
-
-### 3. Improved Reliability- ✅ **Cleaner code** - No more HTML generation in Go backend
-
-- Browser's native timeout handling instead of custom polling- ✅ **Type safety** - Proper JSON marshaling/unmarshaling
-
-- Better error handling with try/catch- ✅ **Error handling** - Proper HTTP status codes and error messages
-
-- Clearer error messages- ✅ **Async/await** - Modern JavaScript patterns, easier to read
-
-- No cross-origin issues with iframes
-
-### Performance
-
-### 4. Easier Debugging- ✅ **Faster** - No DOM manipulation for hidden iframe/form
-
-- Network requests visible in browser DevTools- ✅ **Less overhead** - Direct JSON communication vs HTML parsing
-
-- Proper HTTP status codes- ✅ **Better error detection** - Immediate fetch failures vs timeout waiting
-
-- JSON responses are easier to inspect
-
-- Console logging works correctly### Maintainability
-
-- ✅ **Standard patterns** - RESTful JSON API
-
-### 5. Better Security- ✅ **Easier debugging** - Network tab shows clean JSON requests/responses
-
-- Eliminates iframe security concerns- ✅ **Future-proof** - Modern web standards
-
-- Proper CORS handling
-
-- No need for `postMessage` workarounds### Lambda Compatibility
-
-- ✅ **Resolved timeout issues** - No iframe callback restrictions
-
-### 6. Solves Lambda Issues- ✅ **Better cross-origin** - No parent.callback() cross-domain issues
-
-- **Root cause of "Server not responding" on Lambda**: The iframe approach had cross-origin issues when deployed on Lambda with API Gateway- ✅ **Proper async** - Native promise-based flow control
-
-- **Fix**: Direct fetch calls work correctly in all deployment scenarios
-
-- **No more timeout issues**: Sequential folder processing with proper async/await eliminates bulk operation timeouts## Testing Checklist
-
-
-
-## Testing- [x] Directory browsing works
-
-- [x] Version loading works
-
-### Local Testing- [ ] Playlist operations (add/remove tracks)
-
-1. Build: `go build -v -ldflags="-w -s -X 'main.Version=dev'" -o go-music .`- [ ] Search functionality (by title and directory)
-
-2. Run: `MUSIC_DIR=./mp3 ./go-music`- [ ] Play/pause/stop controls
-
-3. Open: http://localhost:8080- [ ] Track navigation (prev/next)
-
-4. Test all features:- [ ] Shuffle mode
-
-   - Browse directories ✓- [ ] Add all MP3 to playlist
-
-   - Search by title ✓- [ ] Add folder to playlist (modal dialog)
-
-   - Search by directory ✓- [ ] Mobile responsive layout
-
-   - Add files to playlist ✓
-
-   - Add all MP3 files from selected folders ✓## Rollback Plan
-
-   - Play/pause/skip controls ✓
-
-If issues are discovered, the previous iframe-based implementation is available in git history:
-
-### Lambda Deployment```bash
-
-1. Deploy to Lambda: `git push` (GitHub Actions will handle deployment)git log --oneline | grep -i iframe
-
-2. Test at: https://m3.hycm.comgit checkout <commit-hash> -- main.go static/
-
-3. Verify:```
-
-   - Directory browsing works
-
-   - Search functionality works## Next Steps
-
-   - Folder selection and batch adding works without timeout
-
-   - No "Server not responding" errors1. Test all functionality thoroughly
-
-2. Deploy to Lambda and verify timeout issues are resolved
-
-## Migration Notes3. Monitor for any edge cases or errors
-
-4. Consider adding TypeScript for better type safety in frontend
-
-### Breaking Changes
-- **None for end users**: The migration is completely transparent
-- API calls use different internal format but behavior is identical
-
-### Backward Compatibility
-- Backend accepts both JSON (new) and form data (old) during migration period
-- Can safely deploy backend before frontend (will fall back to form data)
-- Can safely deploy frontend after backend (backend accepts both formats)
-
-### Code Cleanup Opportunities
-After migration is stable, consider:
-1. Remove `echoReqHtml()` function from `main.go`
-2. Remove `ea()` helper function from `main.go`
-3. Remove fallback form data parsing from `handleRequest()`
-
-## Conclusion
-
-This migration successfully modernizes the codebase from a legacy iframe approach to standard Fetch API, improving performance, reliability, and maintainability while solving the Lambda deployment issues that caused "Server not responding" errors.
+ This migration modernizes the frontend-backend contract and removes brittle iframe callback plumbing. It improves maintainability, observability, and serverless compatibility while keeping the user-facing behavior unchanged.
