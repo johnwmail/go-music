@@ -36,3 +36,5 @@ bootstrap
 *.zip
 mp3/
 music/
+*.log
+
