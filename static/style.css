@@ -205,6 +205,10 @@ body {
 	transition: all 0.2s ease;
 }
 
+/* Hide the thumb when progress is 0% (width: 0) */
+.progress-fill[style*="width: 0"]::after {
+    display: none;
+}
 .progress-track:hover .progress-fill::after {
 	width: 1.25rem;
 	height: 1.25rem;
