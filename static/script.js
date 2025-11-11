@@ -182,8 +182,18 @@ function secondsToTime(secs) {
 function updateProgressBar() {
     var cur = player.currentTime;
     var max = player.duration;
+    var barElement = gebi('bar');
+    
     if ((cur != cur) || (max != max) || (cur > max)) {
-        gebi('bar').innerHTML = '<div class="progress-track"><div class="progress-fill" style="width: 0%"></div></div>';
+        // Initialize progress bar structure if not present
+        if (!barElement.querySelector('.progress-track')) {
+            barElement.innerHTML = '<div class="progress-track" onclick="seekToPosition(event)"><div class="progress-fill" style="width: 0%"></div></div>';
+        } else {
+            var fillElement = barElement.querySelector('.progress-fill');
+            if (fillElement) {
+                fillElement.style.width = '0%';
+            }
+        }
         gebi('trackCurrentTime').innerHTML = secondsToTime(0);
         gebi('trackRemaining').innerHTML = secondsToTime(0);
         gebi('trackDuration').innerHTML = secondsToTime(0);
@@ -192,17 +202,32 @@ function updateProgressBar() {
         gebi('trackRemaining').innerHTML = secondsToTime(Math.floor(max) - Math.floor(cur));
         gebi('trackDuration').innerHTML = secondsToTime(player.duration);
         var progress = (cur / max) * 100;
-        gebi('bar').innerHTML = '<div class="progress-track" onclick="seekToPosition(event)"><div class="progress-fill" style="width: ' + progress + '%"></div></div>';
+        
+        // Initialize progress bar structure if not present, otherwise just update width
+        if (!barElement.querySelector('.progress-track')) {
+            barElement.innerHTML = '<div class="progress-track" onclick="seekToPosition(event)"><div class="progress-fill" style="width: ' + progress + '%"></div></div>';
+        } else {
+            var fillElement = barElement.querySelector('.progress-fill');
+            if (fillElement) {
+                fillElement.style.width = progress + '%';
+            }
+        }
     }
 }
 
 function seekToPosition(event) {
+    // Validate that player.duration is a valid number before seeking
+    if (!player.duration || isNaN(player.duration) || player.duration <= 0) {
+        return;
+    }
+    
     var bar = event.currentTarget;
     var rect = bar.getBoundingClientRect();
     var clickX = event.clientX - rect.left;
     var barWidth = rect.width;
     var seekPercent = clickX / barWidth;
     var seekTime = seekPercent * player.duration;
+    
     if (seekTime >= 0 && seekTime <= player.duration) {
         player.currentTime = seekTime;
     }
