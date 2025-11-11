@@ -57,6 +57,11 @@ func init() {
 	log.Printf("Gin cold start")
 	log.Printf("Build info: Version=%s, CommitHash=%s, BuildTime=%s", Version, CommitHash, BuildTime)
 
+	// Check if MUSIC_DIR is set from environment (including tests)
+	if envDir := os.Getenv("MUSIC_DIR"); envDir != "" && localMusicDir == "" {
+		localMusicDir = envDir
+	}
+
 	// Initialize storage backend
 	if localMusicDir == "" {
 		if err := initS3(); err != nil {
@@ -251,33 +256,51 @@ func initS3() error {
 
 // handleRequest is the main router for API calls from the frontend.
 func handleRequest(c *gin.Context) {
-	funcType := c.PostForm("dffunc")
-	data := c.PostForm("dfdata")
+	var req struct {
+		Function string `json:"function" form:"dffunc"`
+		Data     string `json:"data" form:"dfdata"`
+	}
 
-	switch funcType {
+	// Check content type to determine binding method
+	contentType := c.GetHeader("Content-Type")
+	if strings.Contains(contentType, "application/json") {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid JSON"})
+			return
+		}
+	} else {
+		// Form data (backwards compatibility)
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid form data"})
+			return
+		}
+	}
+
+	switch req.Function {
 	case "dir":
-		handleDirRequest(c, data)
+		handleDirRequest(c, req.Data)
 	case "searchTitle":
-		handleSearchTitle(c, data)
+		handleSearchTitle(c, req.Data)
 	case "searchDir":
-		handleSearchDir(c, data)
+		handleSearchDir(c, req.Data)
 	case "getAllMp3":
 		handleGetAllMp3(c)
 	case "getAllMp3InDir":
-		handleGetAllMp3InDir(c, data)
+		handleGetAllMp3InDir(c, req.Data)
 	case "getAllDirs":
 		handleGetAllDirs(c)
 	case "getAllMp3InDirs":
-		handleGetAllMp3InDirs(c, data)
+		handleGetAllMp3InDirs(c, req.Data)
 	case "version":
 		handleVersion(c)
 	default:
-		echoReqHtml(c, []interface{}{"error", "Unknown function"}, "default")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Unknown function"})
 	}
 }
 
 func handleVersion(c *gin.Context) {
-	echoReqHtml(c, []interface{}{"ok", Version}, "setVersion")
+	log.Printf("Returning version: %s", Version)
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "version": Version})
 }
 
 // --- S3 Helper Functions ---
@@ -307,11 +330,11 @@ func handleGetAllMp3(c *gin.Context) {
 	files, err := listAllAudioFiles("")
 	if err != nil {
 		log.Printf("Get all mp3 error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Failed to scan music files"}, "getAllMp3Data")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Failed to scan music files"})
 		return
 	}
 	sort.Strings(files)
-	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3Data")
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "files": files})
 }
 
 func handleGetAllMp3InDir(c *gin.Context, data string) {
@@ -319,87 +342,89 @@ func handleGetAllMp3InDir(c *gin.Context, data string) {
 	var dir string
 	if err := json.Unmarshal([]byte(data), &dir); err != nil {
 		log.Printf("Failed to parse directory path: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Invalid directory path"}, "getAllMp3InDirData")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Invalid directory path"})
 		return
 	}
 
 	files, err := listAllAudioFiles(dir)
 	if err != nil {
 		log.Printf("Get all mp3 in dir error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Failed to scan music directory"}, "getAllMp3InDirData")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Failed to scan music directory"})
 		return
 	}
 	sort.Strings(files)
-	echoReqHtml(c, []interface{}{"ok", files}, "getAllMp3InDirData")
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "files": files})
 }
 
 func handleGetAllDirs(c *gin.Context) {
 	dirs, err := listAllDirs()
 	if err != nil {
 		log.Printf("Get all dirs error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Failed to scan directories"}, "getAllDirsData")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Failed to scan directories"})
 		return
 	}
 	if len(dirs) > 1 {
 		sort.Strings(dirs[1:]) // keep root at top
 	}
-	echoReqHtml(c, []interface{}{"ok", dirs}, "getAllDirsData")
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "dirs": dirs})
 }
 
 func handleDirRequest(c *gin.Context, dir string) {
 	dirs, files, err := listDir(dir)
 	if err != nil {
 		log.Printf("List error: %v", err)
-		echoReqHtml(c, []interface{}{"error", TXT_ACC_DIR, dir, []string{}}, "getBrowserData")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": TXT_ACC_DIR, "dir": dir, "dirs": []string{}, "files": []string{}})
 		return
 	}
 	sort.Strings(dirs)
 	sort.Strings(files)
-	echoReqHtml(c, []interface{}{"ok", dir, dirs, files}, "getBrowserData")
+	result := gin.H{"status": "ok", "dir": dir, "dirs": dirs, "files": files}
+	log.Printf("Returning dir response: status=ok, dir=%s, dirs=%d, files=%d", dir, len(dirs), len(files))
+	c.JSON(http.StatusOK, result)
 }
 
 func handleSearchTitle(c *gin.Context, searchStr string) {
 	searchStr = strings.TrimSpace(searchStr)
 	if len(searchStr) < MIN_SEARCH_STR {
-		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchTitle")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), "titles": []string{}})
 		return
 	}
 	titles, err := searchFiles(searchStr)
 	if err != nil {
 		log.Printf("Search error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Search error", []string{}}, "getSearchTitle")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Search error", "titles": []string{}})
 		return
 	}
 	if len(titles) > MAX_SEARCH_RESULT {
 		titles = titles[:MAX_SEARCH_RESULT]
 	}
 	sort.Strings(titles)
-	echoReqHtml(c, []interface{}{"", titles}, "getSearchTitle")
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "titles": titles})
 }
 
 func handleSearchDir(c *gin.Context, searchStr string) {
 	searchStr = strings.TrimSpace(searchStr)
 	if len(searchStr) < MIN_SEARCH_STR {
-		echoReqHtml(c, []interface{}{"error", TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), []string{}}, "getSearchDir")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), "dirs": []string{}})
 		return
 	}
 	dirs, err := searchDirs(searchStr)
 	if err != nil {
 		log.Printf("Search dir error: %v", err)
-		echoReqHtml(c, []interface{}{"error", "Search dir error", []string{}}, "getSearchDir")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Search dir error", "dirs": []string{}})
 		return
 	}
 	if len(dirs) > MAX_SEARCH_RESULT {
 		dirs = dirs[:MAX_SEARCH_RESULT]
 	}
 	sort.Strings(dirs)
-	echoReqHtml(c, []interface{}{"", dirs}, "getSearchDir")
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "dirs": dirs})
 }
 
 func handleGetAllMp3InDirs(c *gin.Context, data string) {
 	var selectedFolders []string
 	if err := json.Unmarshal([]byte(data), &selectedFolders); err != nil {
-		echoReqHtml(c, []interface{}{"error", "Invalid folder data"}, "getAllMp3Data")
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Invalid folder data"})
 		return
 	}
 	var allFiles []string
@@ -420,7 +445,7 @@ func handleGetAllMp3InDirs(c *gin.Context, data string) {
 		}
 	}
 	sort.Strings(finalFiles)
-	echoReqHtml(c, []interface{}{"ok", finalFiles}, "getAllMp3Data")
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "files": finalFiles})
 	// FIX: Add missing closing bracket for function
 }
 
@@ -501,30 +526,6 @@ func searchDirs(term string) ([]string, error) {
 		return localSearchDirs(term)
 	}
 	return s3SearchDirs(term)
-}
-
-func echoReqHtml(c *gin.Context, data []interface{}, funcName string) {
-	c.Header("Content-Type", "text/html; charset="+CHARSET)
-	c.String(http.StatusOK, `<!DOCTYPE html><html><head><meta charset="UTF-8"><script>var dataContainer = `+ea(data)+`;</script></head><body onload="parent.`+funcName+`(dataContainer)"></body></html>`)
-}
-
-func ea(varData []interface{}) string {
-	res := ""
-	for i, v := range varData {
-		if i > 0 {
-			res += ","
-		}
-		if arr, ok := v.([]string); ok {
-			var quotedItems []string
-			for _, item := range arr {
-				quotedItems = append(quotedItems, `"`+strings.ReplaceAll(item, `"`, `\\"`)+`"`)
-			}
-			res += "[" + strings.Join(quotedItems, ",") + "]"
-		} else {
-			res += `"` + strings.ReplaceAll(fmt.Sprint(v), `"`, `\\"`) + `"`
-		}
-	}
-	return "[" + res + "]"
 }
 
 // --- Placeholder handlers from original code ---
