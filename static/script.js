@@ -180,17 +180,10 @@ function secondsToTime(secs) {
 
 
 function updateProgressBar() {
-    var leds = 14;
     var cur = player.currentTime;
     var max = player.duration;
     if ((cur != cur) || (max != max) || (cur > max)) {
-        var bar = '';
-        var progress = -1;
-        lastProgress = progress;
-        for (var i = 0; i < leds; i++) {
-            bar += '<div class="progress-segment"></div>';
-        }
-        gebi('bar').innerHTML = bar;
+        gebi('bar').innerHTML = '<div class="progress-track"><div class="progress-fill" style="width: 0%"></div></div>';
         gebi('trackCurrentTime').innerHTML = secondsToTime(0);
         gebi('trackRemaining').innerHTML = secondsToTime(0);
         gebi('trackDuration').innerHTML = secondsToTime(0);
@@ -198,24 +191,20 @@ function updateProgressBar() {
         gebi('trackCurrentTime').innerHTML = secondsToTime(Math.floor(cur));
         gebi('trackRemaining').innerHTML = secondsToTime(Math.floor(max) - Math.floor(cur));
         gebi('trackDuration').innerHTML = secondsToTime(player.duration);
-        var progress = Math.floor(cur / max * leds);
-        if (progress == leds) {
-            progress = leds - 1;
-        }
-        if (progress != lastProgress) {
-            var bar = '';
-            lastProgress = progress;
-            for (var i = 0; i < leds; i++) {
-                var className = 'progress-segment';
-                if (i == progress) {
-                    className += ' active';
-                } else if (i < progress) {
-                    className += ' inactive';
-                }
-                bar += '<div class="' + className + '" onClick="player.currentTime=' + Math.ceil(max / leds * (i)) + '"></div>';
-            }
-            gebi('bar').innerHTML = bar;
-        }
+        var progress = (cur / max) * 100;
+        gebi('bar').innerHTML = '<div class="progress-track" onclick="seekToPosition(event)"><div class="progress-fill" style="width: ' + progress + '%"></div></div>';
+    }
+}
+
+function seekToPosition(event) {
+    var bar = event.currentTarget;
+    var rect = bar.getBoundingClientRect();
+    var clickX = event.clientX - rect.left;
+    var barWidth = rect.width;
+    var seekPercent = clickX / barWidth;
+    var seekTime = seekPercent * player.duration;
+    if (seekTime >= 0 && seekTime <= player.duration) {
+        player.currentTime = seekTime;
     }
 }
 
