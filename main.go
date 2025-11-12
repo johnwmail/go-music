@@ -471,12 +471,11 @@ func handleSearchInDir(c *gin.Context, raw string) {
 	for _, f := range files {
 		if strings.Contains(strings.ToLower(f), lcTerm) {
 			// Build match entry: path, title and dir
-			title := f
 			// Normalize title: use filename without path and extension and replace underscores
 			base := filepath.Base(f)
 			name := strings.TrimSuffix(base, filepath.Ext(base))
 			name = strings.ReplaceAll(name, "_", " ")
-			title = name
+			title := name
 			dirpath := filepath.Dir(f)
 			if dirpath == "." {
 				dirpath = ""
