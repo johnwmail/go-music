@@ -77,7 +77,8 @@ func init() {
 		// Read index.html and inject version for cache busting
 		htmlContent, err := os.ReadFile("./static/index.html")
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Error loading index.html")
+			log.Printf("Failed to read index.html: %v", err)
+			c.String(http.StatusInternalServerError, "Error loading page")
 			return
 		}
 		// Replace version placeholders with actual version
