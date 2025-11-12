@@ -81,7 +81,7 @@ func init() {
 			return
 		}
 		// Replace version placeholders with actual version
-		html := strings.ReplaceAll(string(htmlContent), "?v=VERSION", "?v="+Version)
+		html := strings.ReplaceAll(string(htmlContent), "__VERSION__", Version)
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(http.StatusOK, html)
 	})
