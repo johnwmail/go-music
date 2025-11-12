@@ -179,18 +179,25 @@ function secondsToTime(secs) {
 }
 
 
+var isDragging = false;
+var wasPlayingBeforeDrag = false;
+
 function updateProgressBar() {
-    var leds = 14;
     var cur = player.currentTime;
     var max = player.duration;
+    var barElement = gebi('bar');
+
     if ((cur != cur) || (max != max) || (cur > max)) {
-        var bar = '';
-        var progress = -1;
-        lastProgress = progress;
-        for (var i = 0; i < leds; i++) {
-            bar += '<div class="progress-segment"></div>';
+        // Initialize progress bar structure if not present
+        if (!barElement.querySelector('.progress-track')) {
+            barElement.innerHTML = '<div class="progress-track"><div class="progress-fill" style="width: 0%"></div></div>';
+            initProgressBarEvents();
+        } else {
+            var fillElement = barElement.querySelector('.progress-fill');
+            if (fillElement) {
+                fillElement.style.width = '0%';
+            }
         }
-        gebi('bar').innerHTML = bar;
         gebi('trackCurrentTime').innerHTML = secondsToTime(0);
         gebi('trackRemaining').innerHTML = secondsToTime(0);
         gebi('trackDuration').innerHTML = secondsToTime(0);
@@ -198,23 +205,115 @@ function updateProgressBar() {
         gebi('trackCurrentTime').innerHTML = secondsToTime(Math.floor(cur));
         gebi('trackRemaining').innerHTML = secondsToTime(Math.floor(max) - Math.floor(cur));
         gebi('trackDuration').innerHTML = secondsToTime(player.duration);
-        var progress = Math.floor(cur / max * leds);
-        if (progress == leds) {
-            progress = leds - 1;
-        }
-        if (progress != lastProgress) {
-            var bar = '';
-            lastProgress = progress;
-            for (var i = 0; i < leds; i++) {
-                var className = 'progress-segment';
-                if (i == progress) {
-                    className += ' active';
-                } else if (i < progress) {
-                    className += ' inactive';
+
+        // Only update progress bar if not currently dragging
+        if (!isDragging) {
+            var progress = (cur / max) * 100;
+
+            // Initialize progress bar structure if not present, otherwise just update width
+            if (!barElement.querySelector('.progress-track')) {
+                barElement.innerHTML = '<div class="progress-track"><div class="progress-fill" style="width: ' + progress + '%"></div></div>';
+                initProgressBarEvents();
+            } else {
+                var fillElement = barElement.querySelector('.progress-fill');
+                if (fillElement) {
+                    fillElement.style.width = progress + '%';
                 }
-                bar += '<div class="' + className + '" onClick="player.currentTime=' + Math.ceil(max / leds * (i)) + '"></div>';
             }
-            gebi('bar').innerHTML = bar;
+        }
+    }
+}
+
+function initProgressBarEvents() {
+    var progressTrack = document.querySelector('.progress-track');
+    if (!progressTrack) return;
+
+    // Mouse events
+    progressTrack.addEventListener('mousedown', startDrag);
+
+    // Touch events for mobile
+    progressTrack.addEventListener('touchstart', startDrag, { passive: false });
+}
+
+function startDrag(event) {
+    // Validate that player.duration is a valid number before seeking
+    if (!player.duration || isNaN(player.duration) || player.duration <= 0) {
+        return;
+    }
+
+    event.preventDefault();
+    isDragging = true;
+    wasPlayingBeforeDrag = !player.paused;
+
+    // Pause playback while dragging for smoother experience
+    if (wasPlayingBeforeDrag) {
+        player.pause();
+    }
+
+    // Seek to initial position
+    seekToPosition(event);
+
+    // Add move and end listeners
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('touchmove', onDrag, { passive: false });
+    document.addEventListener('touchend', stopDrag);
+}
+
+function onDrag(event) {
+    if (!isDragging) return;
+    event.preventDefault();
+    seekToPosition(event);
+}
+
+function stopDrag(event) {
+    if (!isDragging) return;
+
+    isDragging = false;
+
+    // Resume playback if it was playing before drag
+    if (wasPlayingBeforeDrag) {
+        player.play();
+    }
+
+    // Remove move and end listeners
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', stopDrag);
+    document.removeEventListener('touchmove', onDrag);
+    document.removeEventListener('touchend', stopDrag);
+}
+
+function seekToPosition(event) {
+    // Validate that player.duration is a valid number before seeking
+    if (!player.duration || isNaN(player.duration) || player.duration <= 0) {
+        return;
+    }
+
+    var progressTrack = document.querySelector('.progress-track');
+    if (!progressTrack) return;
+
+    var rect = progressTrack.getBoundingClientRect();
+    var clientX;
+
+    // Handle both mouse and touch events
+    if (event.type.startsWith('touch')) {
+        clientX = event.touches[0]?.clientX || event.changedTouches[0]?.clientX;
+    } else {
+        clientX = event.clientX;
+    }
+
+    var clickX = clientX - rect.left;
+    var barWidth = rect.width;
+    var seekPercent = Math.max(0, Math.min(1, clickX / barWidth)); // Clamp between 0 and 1
+    var seekTime = seekPercent * player.duration;
+
+    player.currentTime = seekTime;
+
+    // Update progress bar immediately during drag
+    if (isDragging) {
+        var fillElement = document.querySelector('.progress-fill');
+        if (fillElement) {
+            fillElement.style.width = (seekPercent * 100) + '%';
         }
     }
 }
