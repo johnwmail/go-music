@@ -22,6 +22,18 @@ var shuffle = false;
 var browserFilterString = '';
 
 
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
 // Modern fetch API function to replace iframe-based loadFromServer
 async function fetchAPI(functionName, data) {
     loading = true;
@@ -511,7 +523,7 @@ function setAndPlayTrack(track) {
     var trackTitle = getTrackTitle(track);
     var trackDir = getTrackDir(track);
     var trackNameEl = gebi('trackName');
-    trackNameEl.innerHTML = '<div class="track-title">' + trackTitle + '</div><div class="track-path">' + trackDir + '</div>';
+    trackNameEl.innerHTML = '<div class="track-title">' + escapeHtml(trackTitle) + '</div><div class="track-path">' + escapeHtml(trackDir) + '</div>';
     playingTrack = track;
     // Fetch the pre-signed S3 URL from the backend and set it as the audio src
     fetch('/audio/' + track)
@@ -566,11 +578,11 @@ function updateBrowser() {
         if (i === browserCurDirs.length - 1) {
             // Last item - add the + button
             list += '<div class="breadcrumb-item-wrapper">';
-            list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + browserCurDirs[i] + '</div>';
+            list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + escapeHtml(browserCurDirs[i]) + '</div>';
             list += '<button class="breadcrumb-add-btn" onClick="event.stopPropagation();addCurrentDirToPlaylist()" title="Add all songs from current directory">＋</button>';
             list += '</div>';
         } else {
-            list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + browserCurDirs[i] + '</div>';
+            list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + escapeHtml(browserCurDirs[i]) + '</div>';
         }
     }
     list += '</div>';
@@ -578,7 +590,7 @@ function updateBrowser() {
     // Filter input
     list += '<div class="browser-filter-container">';
     list += '<button class="browser-filter-search-btn" onClick="applyBrowserFilter()" title="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>';
-    list += '<input class="browser-filter-input" value="' + browserFilterString + '" id="browserFilterInput" type="text" placeholder="Type and press Enter or click search..." onkeypress="if(event.key===\'Enter\')applyBrowserFilter()">';
+    list += '<input class="browser-filter-input" value="' + escapeHtml(browserFilterString) + '" id="browserFilterInput" type="text" placeholder="Type and press Enter or click search..." onkeypress="if(event.key===\'Enter\')applyBrowserFilter()">';
     if (browserFilterString) {
         list += '<button class="browser-filter-clear" onClick="clearBrowserFilter()" title="Clear filter">✕</button>';
     }
@@ -603,7 +615,7 @@ function updateBrowser() {
             }
         }
         var totalResults = filteredDirsCount + filteredTitlesCount;
-        list += '<div class="info-banner"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> ' + totalResults + ' result' + (totalResults !== 1 ? 's' : '') + ' found for "' + browserFilterString + '"</div>';
+        list += '<div class="info-banner"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> ' + totalResults + ' result' + (totalResults !== 1 ? 's' : '') + ' found for "' + escapeHtml(browserFilterString) + '"</div>';
     }
 
     // Directories
@@ -611,8 +623,8 @@ function updateBrowser() {
         if (!filterLower || browserDirs[i].toLowerCase().indexOf(filterLower) >= 0) {
             list += '<div class="list-item directory" onClick="browseDir(' + i + ')">';
             list += '<div class="item-content">';
-            list += '<div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> ' + browserDirs[i] + '</div>';
-            list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
+            list += '<div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> ' + escapeHtml(browserDirs[i]) + '</div>';
+            list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(browserCurDir)) + '</div>';
             list += '</div>';
             list += '<div class="item-action" onClick="event.stopPropagation();addDirectoryToPlaylist(' + i + ')" title="Add all songs from this folder">＋</div>';
             list += '</div>';
@@ -627,8 +639,8 @@ function updateBrowser() {
             var isPlaying = playingTrack == browserCurDir + browserTitles[i];
             list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromBrowser(' + i + ')">';
             list += '<div class="item-content">';
-            list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + getTrackTitle(browserTitles[i]) + '</div>';
-            list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
+            list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + escapeHtml(getTrackTitle(browserTitles[i])) + '</div>';
+            list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(browserCurDir)) + '</div>';
             list += '</div>';
             list += `<div class="item-action${playlistCount > 0 ? ' in-playlist' : ''}" onClick="event.stopPropagation();${playlistCount > 0 ? 'removeBrowserTrackFromPlaylist' : 'addTrackFromBrowser'}(${i})">`;
             list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
@@ -637,6 +649,7 @@ function updateBrowser() {
     }
 
     list += '</div>';
+    // lgtm[js/xss] - All user data in list is escaped via escapeHtml() function
     gebi('frameBrowser').innerHTML = list;
 }
 
@@ -665,14 +678,15 @@ function updatePlaylist() {
         var isPlaying = playingTrack == playlistTracks[i];
         list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromPlaylist(' + i + ');player.play()">';
         list += '<div class="item-content">';
-        list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + getTrackTitle(playlistTracks[i]) + '</div>';
-        list += '<div class="item-subtitle">' + getTrackDir(playlistTracks[i]) + '</div>';
+        list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + escapeHtml(getTrackTitle(playlistTracks[i])) + '</div>';
+        list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(playlistTracks[i])) + '</div>';
         list += '</div>';
         list += '<div class="item-action in-playlist" onClick="event.stopPropagation();removeTrack(' + i + ')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></div>';
         list += '</div>';
     }
 
     list += '</div>';
+    // lgtm[js/xss] - All user data in list is escaped via escapeHtml() function
     gebi('framePlaylist').innerHTML = list;
 }
 
@@ -713,8 +727,8 @@ function updateSearch(action) {
     for (var i = 0; i < searchDirs.length; i++) {
         list += '<div class="list-item directory" onClick="browseDirByStr(searchDirs[' + i + '])">';
         list += '<div class="item-content">';
-        list += '<div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> ' + searchDirs[i].split('/').pop() + '</div>';
-        list += '<div class="item-subtitle">' + getTrackDir(searchDirs[i]) + '</div>';
+        list += '<div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> ' + escapeHtml(searchDirs[i].split('/').pop()) + '</div>';
+        list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(searchDirs[i])) + '</div>';
         list += '</div></div>';
     }
 
@@ -725,8 +739,8 @@ function updateSearch(action) {
         var isPlaying = playingTrack == searchDirTracks[i];
         list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromSearch(' + i + ',true)">';
         list += '<div class="item-content">';
-        list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + getTrackTitle(searchDirTracks[i]) + '</div>';
-        list += '<div class="item-subtitle">' + getTrackDir(searchDirTracks[i]) + '</div>';
+        list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + escapeHtml(getTrackTitle(searchDirTracks[i])) + '</div>';
+        list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(searchDirTracks[i])) + '</div>';
         list += '</div>';
         list += '<div class="item-action' + (playlistCount > 0 ? ' in-playlist' : '') + '" onClick="event.stopPropagation();' + (playlistCount > 0 ? 'removeSearchTrackFromPlaylist' : 'addTrackFromSearch') + '(' + i + ')">';
         list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
@@ -734,6 +748,7 @@ function updateSearch(action) {
     }
 
     list += '</div>';
+    // lgtm[js/xss] - All user data in list is escaped via escapeHtml() function
     gebi('frameSearch').innerHTML = list;
 }
 
@@ -1140,7 +1155,21 @@ function showToast(message) {
         toast.className = 'toast';
         document.body.appendChild(toast);
     }
-    toast.innerHTML = message; // Use innerHTML to support SVG icons
+
+    // Clear previous content
+    toast.textContent = '';
+
+    // If message is an object with svg and text, build it safely
+    if (typeof message === 'object' && message.svg && message.text) {
+        var span = document.createElement('span');
+        span.innerHTML = message.svg;
+        toast.appendChild(span);
+        toast.appendChild(document.createTextNode(' ' + message.text));
+    } else {
+        // Plain text message
+        toast.textContent = message;
+    }
+
     toast.classList.add('show');
 
     setTimeout(function () {
@@ -1158,7 +1187,10 @@ async function addDirectoryToPlaylist(dirIndex) {
 
     // Show notification after adding
     setTimeout(function () {
-        showToast('<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg> ' + dirName + ' added to playlist');
+        showToast({
+            svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
+            text: dirName + ' added to playlist'
+        });
     }, 500);
 }
 
@@ -1172,7 +1204,10 @@ async function addCurrentDirToPlaylist() {
 
     // Show notification after adding
     setTimeout(function () {
-        showToast('<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg> ' + dirName + ' added to playlist');
+        showToast({
+            svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
+            text: dirName + ' added to playlist'
+        });
     }, 500);
 }
 
