@@ -1,19 +1,18 @@
-
 name: Release
 
 on:
   push:
-    tags: [ 'v*' ]
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g., v0.3)'
+        description: "Release tag (e.g., v0.3)"
         required: false
-        default: ''
+        default: ""
       changelog:
-        description: 'Custom changelog message'
+        description: "Custom changelog message"
         required: false
-        default: ''
+        default: ""
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,178 +26,188 @@ jobs:
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         goos: [linux]
         goarch: [amd64, arm64]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
-    
-    - name: Get Go version
-      id: go-version
-      run: echo "version=$(go version | awk '{print $3}' | sed 's/go//')" >> $GITHUB_OUTPUT
 
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ steps.go-version.outputs.version }}-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-${{ steps.go-version.outputs.version }}-
-          
-    - name: Build binary
-      env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
-        CGO_ENABLED: 0
-      run: |
-        BINARY_NAME=go-music
-        
-        VERSION=${GITHUB_REF#refs/tags/}
-        
-        # Ensure dist directory exists
-        mkdir -p dist
-        
-        echo "Building $BINARY_NAME for $GOOS/$GOARCH..."
-        go build -v \
-          -ldflags="-s -w -X main.Version=${VERSION} -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.CommitHash=${GITHUB_SHA:0:7}" \
-          -o "dist/${BINARY_NAME}_${GOOS}_${GOARCH}" \
-          .
-          
-    - name: Create archive
-      run: |
-        cd dist/
-        echo "Files in dist directory:"
-        ls -la
-        for file in *; do
-          echo "Checking: $file"
-          echo "Type: $(file "$file")"
-          if [ -f "$file" ]; then
-            # Create a temporary directory for packaging
-            pkg_dir="package_${file}"
-            echo "Processing binary file: $file -> package directory: $pkg_dir"
-            
-            # Remove directory if it exists to avoid conflicts
-            rm -rf "$pkg_dir"
-            
-            mkdir "$pkg_dir"
-            # Copy the binary and rename it to generic 'go-music'
-            cp "$file" "$pkg_dir/go-music"
-            cp -r ../static "$pkg_dir/"
-            tar -czf "${file}.tar.gz" "$pkg_dir"
-            rm -rf "$pkg_dir"
-            echo "Created archive: ${file}.tar.gz"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: Get Go version
+        id: go-version
+        run: echo "version=$(go version | awk '{print $3}' | sed 's/go//')" >> $GITHUB_OUTPUT
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ steps.go-version.outputs.version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ steps.go-version.outputs.version }}-
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          BINARY_NAME=go-music
+
+          # Determine version: use input tag, or tag from ref, or short SHA
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
           else
-            echo "Skipping $file (not a regular file)"
+            VERSION="sha-${GITHUB_SHA::7}"
           fi
-        done
-        echo "Final archives:"
-        ls -la *.tar.gz
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: go-music-${{ matrix.goos }}-${{ matrix.goarch }}
-        path: dist/
-        retention-days: 90
+
+          # Replace __VERSION__ placeholder in index.html for cache busting
+          echo "Replacing __VERSION__ with ${VERSION} in static/index.html"
+          sed -i "s/__VERSION__/${VERSION}/g" static/index.html
+
+          # Ensure dist directory exists
+          mkdir -p dist
+
+          echo "Building $BINARY_NAME for $GOOS/$GOARCH..."
+          go build -v \
+            -ldflags="-s -w -X main.Version=${VERSION} -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.CommitHash=${GITHUB_SHA:0:7}" \
+            -o "dist/${BINARY_NAME}_${GOOS}_${GOARCH}" \
+            .
+
+      - name: Create archive
+        run: |
+          cd dist/
+          echo "Files in dist directory:"
+          ls -la
+          for file in *; do
+            echo "Checking: $file"
+            echo "Type: $(file "$file")"
+            if [ -f "$file" ]; then
+              # Create a temporary directory for packaging
+              pkg_dir="package_${file}"
+              echo "Processing binary file: $file -> package directory: $pkg_dir"
+              
+              # Remove directory if it exists to avoid conflicts
+              rm -rf "$pkg_dir"
+              
+              mkdir "$pkg_dir"
+              # Copy the binary and rename it to generic 'go-music'
+              cp "$file" "$pkg_dir/go-music"
+              cp -r ../static "$pkg_dir/"
+              tar -czf "${file}.tar.gz" "$pkg_dir"
+              rm -rf "$pkg_dir"
+              echo "Created archive: ${file}.tar.gz"
+            else
+              echo "Skipping $file (not a regular file)"
+            fi
+          done
+          echo "Final archives:"
+          ls -la *.tar.gz
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-music-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/
+          retention-days: 90
 
   release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build]
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts/
-        
-    - name: Prepare release assets
-      run: |
-        mkdir -p release/
-        find artifacts/ -name "*.tar.gz" -type f | while IFS= read -r file; do
-          # Validate file path to prevent directory traversal
-          if [[ "$file" =~ ^artifacts/.+\.tar\.gz$ ]]; then
-            basename_file=$(basename "$file")
-            cp "$file" "release/${basename_file}"
-          else
-            echo "Skipping invalid file: $file"
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release/
+          find artifacts/ -name "*.tar.gz" -type f | while IFS= read -r file; do
+            # Validate file path to prevent directory traversal
+            if [[ "$file" =~ ^artifacts/.+\.tar\.gz$ ]]; then
+              basename_file=$(basename "$file")
+              cp "$file" "release/${basename_file}"
+            else
+              echo "Skipping invalid file: $file"
+            fi
+          done
+          cd release/
+          ls -la
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Use input tag if provided, else use GITHUB_REF
+          CURRENT_TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$CURRENT_TAG" ]; then
+            CURRENT_TAG=${GITHUB_REF#refs/tags/}
           fi
-        done
-        cd release/
-        ls -la
-        
-    - name: Generate changelog
-      id: changelog
-      run: |
-        # Use input tag if provided, else use GITHUB_REF
-        CURRENT_TAG="${{ github.event.inputs.tag }}"
-        if [ -z "$CURRENT_TAG" ]; then
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
-        fi
-        
-        # Validate tag format to prevent injection attacks
-        if [[ ! "$CURRENT_TAG" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+)?$ ]]; then
-          echo "Invalid tag format: $CURRENT_TAG"
-          echo "Tag must match semver format (e.g., v1.0.0, v1.0.0-rc1)"
-          exit 1
-        fi
 
-        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
-        
-        # Validate previous tag if exists
-        if [ -n "$PREVIOUS_TAG" ] && [[ ! "$PREVIOUS_TAG" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+)?$ ]]; then
-          echo "Invalid previous tag format: $PREVIOUS_TAG"
-          PREVIOUS_TAG=""
-        fi
+          # Validate tag format to prevent injection attacks
+          if [[ ! "$CURRENT_TAG" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "Invalid tag format: $CURRENT_TAG"
+            echo "Tag must match semver format (e.g., v1.0.0, v1.0.0-rc1)"
+            exit 1
+          fi
 
-        if [ -n "${{ github.event.inputs.changelog }}" ]; then
-          # Use printf to safely write user input (prevents injection)
-          printf '%s\n' "${{ github.event.inputs.changelog }}" > changelog.md
-        elif [ -n "$PREVIOUS_TAG" ]; then
-          echo "## Changes since $PREVIOUS_TAG" > changelog.md
-          git log --pretty=format:"* %s (%h)" "$PREVIOUS_TAG..$CURRENT_TAG" >> changelog.md
-        else
-          echo "## Initial Release" > changelog.md
-          git log --pretty=format:"* %s (%h)" >> changelog.md
-        fi
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
 
-        # Write output to GITHUB_OUTPUT using a temp file for multi-line output (recommended)
-        {
-          echo "changelog<<EOF"
-          cat changelog.md
-          echo ""
-          echo "EOF"
-        } > temp_changelog_output.txt
-        echo "--- temp_changelog_output.txt contents ---"
-        cat temp_changelog_output.txt
-        echo "-----------------------------------------"
-        cat temp_changelog_output.txt >> "$GITHUB_OUTPUT"
+          # Validate previous tag if exists
+          if [ -n "$PREVIOUS_TAG" ] && [[ ! "$PREVIOUS_TAG" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "Invalid previous tag format: $PREVIOUS_TAG"
+            PREVIOUS_TAG=""
+          fi
 
-        
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: release/*
-        body: ${{ steps.changelog.outputs.changelog }}
-        draft: false
-        tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-        prerelease: ${{ contains(github.event.inputs.tag || github.ref, '-rc') || contains(github.event.inputs.tag || github.ref, '-beta') || contains(github.event.inputs.tag || github.ref, '-alpha') }}
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if [ -n "${{ github.event.inputs.changelog }}" ]; then
+            # Use printf to safely write user input (prevents injection)
+            printf '%s\n' "${{ github.event.inputs.changelog }}" > changelog.md
+          elif [ -n "$PREVIOUS_TAG" ]; then
+            echo "## Changes since $PREVIOUS_TAG" > changelog.md
+            git log --pretty=format:"* %s (%h)" "$PREVIOUS_TAG..$CURRENT_TAG" >> changelog.md
+          else
+            echo "## Initial Release" > changelog.md
+            git log --pretty=format:"* %s (%h)" >> changelog.md
+          fi
+
+          # Write output to GITHUB_OUTPUT using a temp file for multi-line output (recommended)
+          {
+            echo "changelog<<EOF"
+            cat changelog.md
+            echo ""
+            echo "EOF"
+          } > temp_changelog_output.txt
+          echo "--- temp_changelog_output.txt contents ---"
+          cat temp_changelog_output.txt
+          echo "-----------------------------------------"
+          cat temp_changelog_output.txt >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          prerelease: ${{ contains(github.event.inputs.tag || github.ref, '-rc') || contains(github.event.inputs.tag || github.ref, '-beta') || contains(github.event.inputs.tag || github.ref, '-alpha') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
