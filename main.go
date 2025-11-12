@@ -74,7 +74,16 @@ func init() {
 	r = gin.Default()
 	r.Static("/static", "./static")
 	r.GET("/", func(c *gin.Context) {
-		c.File("./static/index.html")
+		// Read index.html and inject version for cache busting
+		htmlContent, err := os.ReadFile("./static/index.html")
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error loading index.html")
+			return
+		}
+		// Replace version placeholders with actual version
+		html := strings.ReplaceAll(string(htmlContent), "?v=VERSION", "?v="+Version)
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusOK, html)
 	})
 	r.GET("/favicon.ico", func(c *gin.Context) {
 		c.File("./static/favicon.ico")
