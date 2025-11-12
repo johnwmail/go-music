@@ -279,6 +279,8 @@ func handleRequest(c *gin.Context) {
 	switch req.Function {
 	case "dir":
 		handleDirRequest(c, req.Data)
+	case "searchInDir":
+		handleSearchInDir(c, req.Data)
 	case "searchTitle":
 		handleSearchTitle(c, req.Data)
 	case "searchDir":
@@ -419,6 +421,76 @@ func handleSearchDir(c *gin.Context, searchStr string) {
 	}
 	sort.Strings(dirs)
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "dirs": dirs})
+}
+
+// handleSearchInDir performs a recursive search for audio files under the provided directory.
+// Request 'data' is expected to be a JSON object: {"dir":"A/B/","term":"query","limit":200}
+func handleSearchInDir(c *gin.Context, raw string) {
+	var req struct {
+		Dir   string `json:"dir"`
+		Term  string `json:"term"`
+		Limit int    `json:"limit"`
+	}
+	if err := json.Unmarshal([]byte(raw), &req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Invalid request"})
+		return
+	}
+
+	term := strings.TrimSpace(req.Term)
+	if len(term) < MIN_SEARCH_STR {
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": TXT_MIN_SEARCH + fmt.Sprintf("%d", MIN_SEARCH_STR), "matches": []string{}})
+		return
+	}
+
+	// Sanitize dir
+	dir := strings.TrimSpace(req.Dir)
+	dir = strings.TrimPrefix(dir, "/")
+	if strings.Contains(dir, "..") {
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Invalid directory"})
+		return
+	}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 200
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	// Retrieve all audio files under the directory (recursive)
+	files, err := listAllAudioFiles(dir)
+	if err != nil {
+		log.Printf("searchInDir list error: %v", err)
+		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Search failed", "matches": []string{}})
+		return
+	}
+
+	lcTerm := strings.ToLower(term)
+	var matches []map[string]string
+	for _, f := range files {
+		if strings.Contains(strings.ToLower(f), lcTerm) {
+			// Build match entry: path, title and dir
+			title := f
+			// Normalize title: use filename without path and extension and replace underscores
+			base := filepath.Base(f)
+			name := strings.TrimSuffix(base, filepath.Ext(base))
+			name = strings.ReplaceAll(name, "_", " ")
+			title = name
+			dirpath := filepath.Dir(f)
+			if dirpath == "." {
+				dirpath = ""
+			} else if !strings.HasSuffix(dirpath, "/") {
+				dirpath += "/"
+			}
+			matches = append(matches, map[string]string{"path": f, "title": title, "dir": dirpath})
+			if len(matches) >= limit {
+				break
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "matches": matches, "count": len(matches)})
 }
 
 func handleGetAllMp3InDirs(c *gin.Context, data string) {
