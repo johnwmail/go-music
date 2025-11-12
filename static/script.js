@@ -494,6 +494,17 @@ function setTrackFromBrowser(id) {
     browserPlaylistTitles = browserTitles;
 }
 
+// Ensure that when playing a track from a filtered browser view the filter results remain visible.
+// Some browsers or async updates can re-render the browser without the filtered subset; force re-render after playback starts.
+function setTrackFromBrowserAndKeepView(id) {
+    setTrackFromBrowser(id);
+    // defer re-render to allow player state updates to settle
+    setTimeout(function () {
+        // re-render browser which respects browserFilterString
+        updateBrowser();
+    }, 10);
+}
+
 
 function setTrackFromPlaylist(id) {
     playing = id;
@@ -639,7 +650,7 @@ function updateBrowser() {
         if (!filterLower || browserTitles[i].toLowerCase().indexOf(filterLower) >= 0) {
             playlistCount = inPlaylist(browserCurDir + browserTitles[i]);
             var isPlaying = playingTrack == browserCurDir + browserTitles[i];
-            list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromBrowser(' + i + ')">';
+            list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromBrowserAndKeepView(' + i + ')">';
             list += '<div class="item-content">';
             list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + escapeHtml(getTrackTitle(browserTitles[i])) + '</div>';
             list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(browserCurDir)) + '</div>';
@@ -662,9 +673,12 @@ function updatePlaylist() {
 
     // Info banner
     if (playlistTracks.length > 0) {
-        list += '<div class="info-banner-playlist">';
-        list += '<div class="info-banner-content"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' + String(playlistTracks.length) + ' track' + (playlistTracks.length !== 1 ? 's' : '') + ' in playlist</div>';
-        list += '<button class="clear-playlist-btn" onClick="event.stopPropagation();clearPlaylist()" title="Clear all tracks"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Clear</button>';
+        // Make the entire banner clickable to clear playlist (with confirmation)
+        // add keyboard handler for Enter/Space to improve accessibility
+        list += '<div class="info-banner-playlist" onClick="clearPlaylist()" onkeydown="if(event.key===\'Enter\' || event.key===\' \'){ event.preventDefault(); clearPlaylist(); }" role="button" tabindex="0" title="Click to clear playlist">';
+        list += '<div class="info-banner-content"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;\"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' + String(playlistTracks.length) + ' track' + (playlistTracks.length !== 1 ? 's' : '') + ' in playlist</div>';
+        // Inline hint on the right as a real button for semantics and focus
+        list += '<button class="clear-playlist-hint" onclick="event.stopPropagation();clearPlaylist()" aria-label="Clear playlist"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;\"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> Click to clear</button>';
         list += '</div>';
     } else {
         list += '<div class="info-banner">Playlist is empty - Add tracks from Browser or Search</div>';
@@ -1218,11 +1232,46 @@ function applyBrowserFilter() {
     var input = gebi('browserFilterInput');
     if (input) {
         browserFilterString = input.value;
-        updateBrowser();
-        // Keep focus on input
-        setTimeout(function () {
-            input.focus();
-        }, 0);
+
+        // If filter is empty, just update the browser view
+        if (!browserFilterString) {
+            updateBrowser();
+            setTimeout(function () { input.focus(); }, 0);
+            return;
+        }
+
+        // Try local (current directory) matches first
+        var filterLower = browserFilterString.toLowerCase();
+        var localMatches = 0;
+        for (var i = 0; i < browserDirs.length; i++) {
+            if (browserDirs[i].toLowerCase().indexOf(filterLower) >= 0) localMatches++;
+        }
+        for (var i = 0; i < browserTitles.length; i++) {
+            // match against filename and displayed title
+            var titleText = getTrackTitle(browserTitles[i]).toLowerCase();
+            if (browserTitles[i].toLowerCase().indexOf(filterLower) >= 0 || titleText.indexOf(filterLower) >= 0) localMatches++;
+        }
+
+        if (localMatches > 0) {
+            // Show local filtered results
+            updateBrowser();
+            // Keep focus on input
+            setTimeout(function () { input.focus(); }, 0);
+        } else {
+            // No local matches — perform a recursive directory search on the server
+            // Keep results in Browser tab (don't switch tabs)
+            var payload = JSON.stringify({ dir: browserCurDir || '', term: browserFilterString, limit: 200 });
+            markLoading('browser');
+            fetchAPI('searchInDir', payload).then(function (data) {
+                markLoading(false);
+                getSearchInDirData(data);
+                setTimeout(function () { input.focus(); }, 0);
+            }).catch(function (err) {
+                markLoading(false);
+                console.error('searchInDir error', err);
+                alert('Search failed: ' + err.message);
+            });
+        }
     }
 }
 
@@ -1236,4 +1285,98 @@ function clearBrowserFilter() {
             input.focus();
         }
     }, 50);
+}
+
+// Results returned by server-side recursive search for the current dir
+var searchInDirMatches = [];
+
+function getSearchInDirData(data) {
+    loading = false;
+    markLoading(false);
+    if (!data || data.status !== 'ok') {
+        var msg = (data && data.message) ? data.message : 'No results';
+        gebi('frameBrowser').innerHTML = '<div class="item-list"><div class="info-banner">' + escapeHtml(msg) + '</div></div>';
+        return;
+    }
+
+    searchInDirMatches = data.matches || [];
+    var list = '<div class="item-list">';
+
+    // Keep breadcrumb and filter input visible
+    list += '<div class="breadcrumb-filter-container">';
+    list += '<div class="breadcrumb">';
+    list += '<div class="breadcrumb-item" onClick="browseDir()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Home</div>';
+    for (var i = 0; i < browserCurDirs.length; i++) {
+        list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + escapeHtml(browserCurDirs[i]) + '</div>';
+    }
+    list += '</div>';
+    list += '<div class="browser-filter-container">';
+    list += '<button class="browser-filter-search-btn" onClick="applyBrowserFilter()" title="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>';
+    list += '<input class="browser-filter-input" value="' + escapeHtml(browserFilterString) + '" id="browserFilterInput" type="text" placeholder="Type and press Enter or click search...">';
+    if (browserFilterString) {
+        list += '<button class="browser-filter-clear" onClick="clearBrowserFilter()" title="Clear filter">✕</button>';
+    }
+    list += '</div></div>';
+
+    list += '<div class="info-banner">' + String(searchInDirMatches.length) + ' result' + (searchInDirMatches.length !== 1 ? 's' : '') + ' found for "' + escapeHtml(browserFilterString) + '"</div>';
+
+    for (var i = 0; i < searchInDirMatches.length; i++) {
+        var m = searchInDirMatches[i];
+        var isPlaying = playingTrack == m.path;
+        var playlistCount = inPlaylist(m.path);
+        list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromSearchInDirAndKeepView(' + i + ')">';
+        list += '<div class="item-content">';
+        list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + escapeHtml(m.title) + '</div>';
+        list += '<div class="item-subtitle">' + escapeHtml(m.dir ? ('Home/' + m.dir) : 'Home') + '</div>';
+        list += '</div>';
+        // show add (+) when not in playlist, star(remove) when already in playlist
+        list += `<div class="item-action${playlistCount > 0 ? ' in-playlist' : ''}" onClick="event.stopPropagation();${playlistCount > 0 ? 'removeSearchInDirTrackFromPlaylist' : 'addTrackFromSearchInDir'}(${i})">`;
+        list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
+        list += '</div>';
+        list += '</div>';
+    }
+
+    list += '</div>';
+    gebi('frameBrowser').innerHTML = list;
+}
+
+function setTrackFromSearchInDir(i) {
+    if (!searchInDirMatches[i]) return;
+    var path = searchInDirMatches[i].path;
+    setAndPlayTrack(path);
+    markPlayingTab('browser');
+}
+
+// When playing an item from server-side searchInDir results, keep the search results visible
+function setTrackFromSearchInDirAndKeepView(i) {
+    if (!searchInDirMatches[i]) return;
+    setTrackFromSearchInDir(i);
+    setTimeout(function () {
+        getSearchInDirData({ status: 'ok', matches: searchInDirMatches });
+    }, 10);
+}
+
+function addTrackFromSearchInDir(i) {
+    if (!searchInDirMatches[i]) return;
+    var path = searchInDirMatches[i].path;
+    // prevent duplicates
+    if (inPlaylist(path) === 0) {
+        playlistTracks.push(path);
+        // only update playlist UI and re-render current search results so user stays on same view
+        updatePlaylist();
+        // re-render searchInDir results to reflect new in-playlist state
+        getSearchInDirData({ status: 'ok', matches: searchInDirMatches });
+    }
+}
+
+function removeSearchInDirTrackFromPlaylist(i) {
+    if (!searchInDirMatches[i]) return;
+    var path = searchInDirMatches[i].path;
+    var index = playlistTracks.lastIndexOf(path);
+    if (index > -1) {
+        playlistTracks.splice(index, 1);
+    }
+    // update playlist and re-render search results
+    updatePlaylist();
+    getSearchInDirData({ status: 'ok', matches: searchInDirMatches });
 }
