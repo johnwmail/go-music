@@ -19,6 +19,7 @@ var searchString = '';
 var searchAction = '';
 var shuffledList = [];
 var shuffle = false;
+var browserFilterString = '';
 
 
 // Modern fetch API function to replace iframe-based loadFromServer
@@ -545,36 +546,94 @@ function getTrackDir(track) {
 function updateBrowser() {
     var list = '<div class="item-list">';
 
-    // Breadcrumb navigation
+    // Breadcrumb navigation with filter input
+    list += '<div class="breadcrumb-filter-container">';
     list += '<div class="breadcrumb">';
-    list += '<div class="breadcrumb-item" onClick="browseDir()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Home</div>';
+
+    // Home breadcrumb
+    if (browserCurDirs.length === 0) {
+        // If at home, wrap it with the add button
+        list += '<div class="breadcrumb-item-wrapper">';
+        list += '<div class="breadcrumb-item" onClick="browseDir()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Home</div>';
+        list += '<button class="breadcrumb-add-btn" onClick="event.stopPropagation();addCurrentDirToPlaylist()" title="Add all songs from current directory">＋</button>';
+        list += '</div>';
+    } else {
+        list += '<div class="breadcrumb-item" onClick="browseDir()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Home</div>';
+    }
+
+    // Directory breadcrumbs
     for (var i = 0; i < browserCurDirs.length; i++) {
-        list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + browserCurDirs[i] + '</div>';
+        if (i === browserCurDirs.length - 1) {
+            // Last item - add the + button
+            list += '<div class="breadcrumb-item-wrapper">';
+            list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + browserCurDirs[i] + '</div>';
+            list += '<button class="breadcrumb-add-btn" onClick="event.stopPropagation();addCurrentDirToPlaylist()" title="Add all songs from current directory">＋</button>';
+            list += '</div>';
+        } else {
+            list += '<div class="breadcrumb-item" onClick="browseDirFromBreadCrumbBar(' + i + ')">' + browserCurDirs[i] + '</div>';
+        }
     }
     list += '</div>';
 
+    // Filter input
+    list += '<div class="browser-filter-container">';
+    list += '<button class="browser-filter-search-btn" onClick="applyBrowserFilter()" title="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>';
+    list += '<input class="browser-filter-input" value="' + browserFilterString + '" id="browserFilterInput" type="text" placeholder="Type and press Enter or click search..." onkeypress="if(event.key===\'Enter\')applyBrowserFilter()">';
+    if (browserFilterString) {
+        list += '<button class="browser-filter-clear" onClick="clearBrowserFilter()" title="Clear filter">✕</button>';
+    }
+    list += '</div>';
+    list += '</div>';
+
+    // Apply filter
+    var filterLower = browserFilterString.toLowerCase();
+
+    // Show filter result count
+    if (browserFilterString) {
+        var filteredDirsCount = 0;
+        var filteredTitlesCount = 0;
+        for (var i = 0; i < browserDirs.length; i++) {
+            if (browserDirs[i].toLowerCase().indexOf(filterLower) >= 0) {
+                filteredDirsCount++;
+            }
+        }
+        for (var i = 0; i < browserTitles.length; i++) {
+            if (browserTitles[i].toLowerCase().indexOf(filterLower) >= 0) {
+                filteredTitlesCount++;
+            }
+        }
+        var totalResults = filteredDirsCount + filteredTitlesCount;
+        list += '<div class="info-banner"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> ' + totalResults + ' result' + (totalResults !== 1 ? 's' : '') + ' found for "' + browserFilterString + '"</div>';
+    }
+
     // Directories
     for (var i = 0; i < browserDirs.length; i++) {
-        list += '<div class="list-item directory" onClick="browseDir(' + i + ')">';
-        list += '<div class="item-content">';
-        list += '<div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> ' + browserDirs[i] + '</div>';
-        list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
-        list += '</div></div>';
+        if (!filterLower || browserDirs[i].toLowerCase().indexOf(filterLower) >= 0) {
+            list += '<div class="list-item directory" onClick="browseDir(' + i + ')">';
+            list += '<div class="item-content">';
+            list += '<div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> ' + browserDirs[i] + '</div>';
+            list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
+            list += '</div>';
+            list += '<div class="item-action" onClick="event.stopPropagation();addDirectoryToPlaylist(' + i + ')" title="Add all songs from this folder">＋</div>';
+            list += '</div>';
+        }
     }
 
     // Music files
     var playlistCount;
     for (var i = 0; i < browserTitles.length; i++) {
-        playlistCount = inPlaylist(browserCurDir + browserTitles[i]);
-        var isPlaying = playingTrack == browserCurDir + browserTitles[i];
-        list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromBrowser(' + i + ')">';
-        list += '<div class="item-content">';
-        list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + getTrackTitle(browserTitles[i]) + '</div>';
-        list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
-        list += '</div>';
-        list += `<div class="item-action${playlistCount > 0 ? ' in-playlist' : ''}" onClick="event.stopPropagation();${playlistCount > 0 ? 'removeBrowserTrackFromPlaylist' : 'addTrackFromBrowser'}(${i})">`;
-        list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
-        list += '</div></div>';
+        if (!filterLower || browserTitles[i].toLowerCase().indexOf(filterLower) >= 0) {
+            playlistCount = inPlaylist(browserCurDir + browserTitles[i]);
+            var isPlaying = playingTrack == browserCurDir + browserTitles[i];
+            list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromBrowser(' + i + ')">';
+            list += '<div class="item-content">';
+            list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + getTrackTitle(browserTitles[i]) + '</div>';
+            list += '<div class="item-subtitle">' + getTrackDir(browserCurDir) + '</div>';
+            list += '</div>';
+            list += `<div class="item-action${playlistCount > 0 ? ' in-playlist' : ''}" onClick="event.stopPropagation();${playlistCount > 0 ? 'removeBrowserTrackFromPlaylist' : 'addTrackFromBrowser'}(${i})">`;
+            list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
+            list += '</div></div>';
+        }
     }
 
     list += '</div>';
@@ -588,7 +647,10 @@ function updatePlaylist() {
 
     // Info banner
     if (playlistTracks.length > 0) {
-        list += '<div class="info-banner" onClick="clearPlaylist()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' + String(playlistTracks.length) + ' track' + (playlistTracks.length !== 1 ? 's' : '') + ' in playlist - Click to clear</div>';
+        list += '<div class="info-banner-playlist">';
+        list += '<div class="info-banner-content"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' + String(playlistTracks.length) + ' track' + (playlistTracks.length !== 1 ? 's' : '') + ' in playlist</div>';
+        list += '<button class="clear-playlist-btn" onClick="event.stopPropagation();clearPlaylist()" title="Clear all tracks"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Clear</button>';
+        list += '</div>';
     } else {
         list += '<div class="info-banner">Playlist is empty - Add tracks from Browser or Search</div>';
     }
@@ -700,10 +762,65 @@ function addTrackFromSearch(id) {
 
 
 function clearPlaylist() {
-    if (confirm('Clear Playlist?') == true) {
-        playlistTracks = [];
-        updateAllLists();
+    showConfirmDialog(
+        'Clear Playlist?',
+        'Are you sure you want to remove all ' + playlistTracks.length + ' track' + (playlistTracks.length !== 1 ? 's' : '') + ' from the playlist?',
+        function () {
+            // User confirmed
+            playlistTracks = [];
+            updateAllLists();
+        }
+    );
+}
+
+// Show a modern confirm dialog
+function showConfirmDialog(title, message, onConfirm) {
+    // Create modal overlay
+    var modal = document.createElement('div');
+    modal.className = 'confirm-modal';
+
+    // Create dialog content
+    var dialog = document.createElement('div');
+    dialog.className = 'confirm-dialog';
+
+    dialog.innerHTML =
+        '<div class="confirm-title">' + title + '</div>' +
+        '<div class="confirm-message">' + message + '</div>' +
+        '<div class="confirm-buttons">' +
+        '<button class="confirm-btn confirm-cancel" onclick="closeConfirmDialog()">Cancel</button>' +
+        '<button class="confirm-btn confirm-ok" onclick="confirmDialogOK()">OK</button>' +
+        '</div>';
+
+    modal.appendChild(dialog);
+    document.body.appendChild(modal);
+
+    // Store callback globally (stateless - only exists during dialog lifetime)
+    window._confirmCallback = onConfirm;
+
+    // Show modal with animation
+    setTimeout(function () {
+        modal.classList.add('show');
+    }, 10);
+}
+
+function closeConfirmDialog() {
+    var modal = document.querySelector('.confirm-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(function () {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+            delete window._confirmCallback;
+        }, 300);
     }
+}
+
+function confirmDialogOK() {
+    if (window._confirmCallback) {
+        window._confirmCallback();
+    }
+    closeConfirmDialog();
 }
 
 
@@ -772,6 +889,7 @@ async function browseDirFromBreadCrumbBar(id) {
     for (var i = 0; i <= id; i++) {
         dir += browserCurDirs[i] + '/';
     }
+    browserFilterString = ''; // Clear filter when navigating
     markLoading('browser');
     const data = await fetchAPI('dir', dir);
     getBrowserData(data);
@@ -783,6 +901,7 @@ async function browseDir(id) {
     if (id !== undefined) {
         dir += browserCurDir + browserDirs[id] + '/';
     }
+    browserFilterString = ''; // Clear filter when navigating
     markLoading('browser');
     const data = await fetchAPI('dir', dir);
     getBrowserData(data);
@@ -790,6 +909,7 @@ async function browseDir(id) {
 
 
 async function browseDirByStr(str) {
+    browserFilterString = ''; // Clear filter when navigating
     markLoading('browser');
     const data = await fetchAPI('dir', str + '/');
     getBrowserData(data);
@@ -1009,4 +1129,74 @@ function getAllMp3Data(data) {
     } else {
         alert('Failed to add files: ' + (data.message || 'Unknown error'));
     }
+}
+
+// Show a temporary toast notification
+function showToast(message) {
+    var toast = document.getElementById('toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+    }
+    toast.innerHTML = message; // Use innerHTML to support SVG icons
+    toast.classList.add('show');
+
+    setTimeout(function () {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Add all songs from a directory to playlist
+async function addDirectoryToPlaylist(dirIndex) {
+    var dirPath = browserCurDir + browserDirs[dirIndex];
+    var dirName = browserDirs[dirIndex];
+    markLoading('browser');
+    const data = await fetchAPI('getAllMp3InDir', JSON.stringify(dirPath));
+    getAllMp3InDirData(data);
+
+    // Show notification after adding
+    setTimeout(function () {
+        showToast('<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg> ' + dirName + ' added to playlist');
+    }, 500);
+}
+
+// Add all songs from current directory to playlist
+async function addCurrentDirToPlaylist() {
+    var dirPath = browserCurDir || ''; // Empty string for root/home
+    var dirName = browserCurDir ? browserCurDir.replace(/\/$/, '').split('/').pop() : 'Home';
+    markLoading('browser');
+    const data = await fetchAPI('getAllMp3InDir', JSON.stringify(dirPath));
+    getAllMp3InDirData(data);
+
+    // Show notification after adding
+    setTimeout(function () {
+        showToast('<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg> ' + dirName + ' added to playlist');
+    }, 500);
+}
+
+// Browser filter functions
+function applyBrowserFilter() {
+    var input = gebi('browserFilterInput');
+    if (input) {
+        browserFilterString = input.value;
+        updateBrowser();
+        // Keep focus on input
+        setTimeout(function () {
+            input.focus();
+        }, 0);
+    }
+}
+
+function clearBrowserFilter() {
+    browserFilterString = '';
+    updateBrowser();
+    // Refocus on the input after clearing
+    setTimeout(function () {
+        var input = gebi('browserFilterInput');
+        if (input) {
+            input.focus();
+        }
+    }, 50);
 }
