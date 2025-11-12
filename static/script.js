@@ -551,7 +551,9 @@ function getTrackDir(track) {
     track = 'Home/' + track.replace(new RegExp('_', 'g'), ' ');
     var dirStr = track.split('/');
     var tmp = dirStr.pop();
-    return dirStr.join(' &#10137; ');
+    // Use the actual Unicode character instead of an HTML entity so
+    // escaping (escapeHtml) does not turn it into a literal entity string.
+    return dirStr.join(' \u2799 ');
 }
 
 
