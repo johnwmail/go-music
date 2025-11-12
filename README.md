@@ -338,7 +338,7 @@ The tests cover:
 - ✅ Directory browsing and filtering
 - ✅ Search functionality (case-insensitive)
 
-The CI pipeline in `.github/workflows/lint-n-build.yml` enforces code quality checks and runs the full test suite automatically.
+The CI pipeline in `.github/workflows/test.yml` enforces code quality checks and runs the full test suite automatically.
 
 ### Project Structure
 
