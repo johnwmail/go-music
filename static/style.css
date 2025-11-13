@@ -721,10 +721,12 @@ body {
 	transition: all 0.15s ease;
 }
 
-.info-banner-add:hover {
-	background: rgba(33, 150, 243, 0.12);
-	color: #0b63b7;
-	transform: translateY(-50%) scale(1.06);
+@media (hover: hover) and (pointer: fine) {
+	.info-banner-add:hover {
+		background: rgba(33, 150, 243, 0.12);
+		color: #0b63b7;
+		transform: translateY(-50%) scale(1.06);
+	}
 }
 
 /* ===== Playlist Info Banner ===== */
