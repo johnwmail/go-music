@@ -1009,6 +1009,23 @@ function getAllMp3Data(data) {
     }
 }
 
+// Handler for responses from getAllMp3InDir API calls (adds files from a single directory)
+function getAllMp3InDirData(data) {
+    loading = false;
+    markLoading(false);
+
+    if (data && data.status === 'ok' && data.files) {
+        for (var i = 0; i < data.files.length; i++) {
+            if (inPlaylist(data.files[i]) === 0) {
+                playlistTracks.push(data.files[i]);
+            }
+        }
+        updateAllLists();
+    } else {
+        console.error('Failed to add files from dir:', data && data.message);
+    }
+}
+
 // Show a temporary toast notification
 function showToast(message) {
     var toast = document.getElementById('toast');
