@@ -992,170 +992,50 @@ function showTab(id) {
     }
 }
 
-// Add modal for folder selection
-var folderSelectModal = null;
-var selectedFolders = [];
-var folderToCheckboxId = {}; // Map folder names to their checkbox IDs
-
-async function showFolderSelectDialog() {
-    selectedFolders = [];
-    folderToCheckboxId = {}; // Reset mapping
-    if (!folderSelectModal) {
-        folderSelectModal = document.createElement('div');
-        folderSelectModal.id = 'folderSelectModal';
-        folderSelectModal.style.position = 'fixed';
-        folderSelectModal.style.top = '0';
-        folderSelectModal.style.left = '0';
-        folderSelectModal.style.width = '100vw';
-        folderSelectModal.style.height = '100vh';
-        folderSelectModal.style.background = 'rgba(0,0,0,0.5)';
-        folderSelectModal.style.zIndex = '9999';
-        folderSelectModal.style.display = 'flex';
-        folderSelectModal.style.alignItems = 'center';
-        folderSelectModal.style.justifyContent = 'center';
-        folderSelectModal.innerHTML = '<div style="background:#fff;padding:2em;border-radius:0.5em;max-height:80vh;overflow:auto;"><div id="folderSelectList">Loading folders...</div><div style="margin-top:1em;text-align:right;"><button onclick="addSelectedFoldersToPlaylist()" style="margin-right:1em;">Add Selected</button><button onclick="closeFolderSelectDialog()">Cancel</button></div></div>';
-        document.body.appendChild(folderSelectModal);
-    }
-    folderSelectModal.style.display = 'flex';
-    // Fetch folders from backend
-    const data = await fetchAPI('getAllDirs', '');
-    getAllDirsData(data);
-}
-
-function toggleFolderSelection(folder, event) {
-    // Prevent default and stop propagation to avoid double-toggling
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    const index = selectedFolders.indexOf(folder);
-    const checkboxId = folderToCheckboxId[folder];
-    const checkbox = checkboxId ? document.getElementById(checkboxId) : null;
-
-    if (index === -1) {
-        selectedFolders.push(folder);
-        if (checkbox) checkbox.checked = true;
-
-    } else {
-        selectedFolders.splice(index, 1);
-        if (checkbox) checkbox.checked = false;
-    }
-}
-
-function addSelectedFoldersToPlaylist() {
-    if (selectedFolders.length === 0) {
-        alert('Please select at least one folder');
-        return;
-    }
-    closeFolderSelectDialog();
-    markLoading('browser');
-
-    // Store folders to process
-    window.foldersToProcess = selectedFolders.slice();
-    window.currentFolderIndex = 0;
-
-    // Start processing first folder
-    processNextFolder();
-}
-
-async function processNextFolder() {
-    if (window.currentFolderIndex >= window.foldersToProcess.length) {
-        // All done
-        loading = false;
-        markLoading(false);
-        updateAllLists();
-        delete window.foldersToProcess;
-        delete window.currentFolderIndex;
-        return;
-    }
-
-    // Process one folder
-    var folder = window.foldersToProcess[window.currentFolderIndex];
-    const data = await fetchAPI('getAllMp3InDir', JSON.stringify(folder));
-    getAllMp3InDirData(data);
-}
-
-function getAllMp3InDirData(data) {
-    loading = false;
-    markLoading(false);
-
-    if (data.status === 'ok' && data.files) {
-        // Add files from this folder to playlist
-        for (var i = 0; i < data.files.length; i++) {
-            if (inPlaylist(data.files[i]) === 0) {
-                playlistTracks.push(data.files[i]);
-            }
-        }
-        updateAllLists();
-    } else {
-        console.error('Failed to process folder:', data.message);
-    }
-
-    // Process next folder
-    if (window.foldersToProcess) {
-        window.currentFolderIndex++;
-        setTimeout(processNextFolder, 100); // Small delay between requests
-    }
-}
-
-function closeFolderSelectDialog() {
-    if (folderSelectModal) folderSelectModal.style.display = 'none';
-}
-
-function getAllDirsData(data) {
-    loading = false;
-    markLoading(false);
-
-    if (!folderSelectModal) return;
-    const folderListDiv = document.getElementById('folderSelectList');
-    if (data.status !== 'ok' || !data.dirs) {
-        folderListDiv.innerHTML = 'Failed to load folders.';
-        return;
-    }
-    var html = '<b>Select folders:</b><br><ul style="max-height:50vh;overflow:auto;padding-left:1em;list-style-type:none;">';
-    // Helper to escape backslashes and single quotes for inclusion in single-quoted JS string
-    function jsSingleQuoteEscape(str) {
-        return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    }
-    // Track used checkbox IDs to prevent conflicts
-    var usedCheckboxIds = {};
-    var idCounter = 0;
-
-    for (var i = 0; i < data.dirs.length; i++) {
-        var folder = data.dirs[i];
-        var displayName = (folder === '' ? 'Home' : 'Home/' + folder);
-        var baseCheckboxId = 'checkbox_' + folder.replace(/[^a-zA-Z0-9]/g, '_');
-        var checkboxId = baseCheckboxId;
-
-        // Ensure unique checkbox ID by adding counter if needed
-        if (usedCheckboxIds[checkboxId]) {
-            checkboxId = baseCheckboxId + '_' + (++idCounter);
-        }
-        usedCheckboxIds[checkboxId] = true;
-
-        // Store mapping from folder to checkbox ID
-        folderToCheckboxId[folder] = checkboxId;
-
-        // Put onclick on label instead of li, and use pointer-events:none on checkbox to prevent double-clicks
-        html += '<li style="margin:0.5em 0;"><label style="display:flex;align-items:center;cursor:pointer;" onclick="toggleFolderSelection(\'' + jsSingleQuoteEscape(folder) + '\', event)"><input type="checkbox" id="' + checkboxId + '" style="margin-right:0.5em;pointer-events:none;" disabled> ' + displayName + '</label></li>';
-    }
-    html += '</ul>';
-    folderListDiv.innerHTML = html;
-}
+// Folder-select modal removed: functionality is covered by the Browser '+' controls.
 
 function getAllMp3Data(data) {
     loading = false;
     markLoading(false);
-    if (data.status === 'ok' && data.files) {
-        for (var i = 0; i < data.files.length; i++) {
-            if (inPlaylist(data.files[i]) === 0) {
-                playlistTracks.push(data.files[i]);
-            }
-        }
-        updateAllLists();
+    if (data && data.status === 'ok' && data.files) {
+        addFilesToPlaylist(data.files);
     } else {
-        alert('Failed to add files: ' + (data.message || 'Unknown error'));
+        alert('Failed to add files: ' + (data && data.message ? data.message : 'Unknown error'));
+    }
+}
+
+// Handler for responses from getAllMp3InDir API calls (adds files from a single directory)
+function getAllMp3InDirData(data) {
+    loading = false;
+    markLoading(false);
+    if (data && data.status === 'ok' && data.files) {
+        addFilesToPlaylist(data.files);
+    } else {
+        console.error('Failed to add files from dir:', data && data.message);
+    }
+}
+
+// Add a list of file paths to the playlist, avoiding duplicates and updating the UI once.
+function addFilesToPlaylist(files) {
+    if (!files || !files.length) return;
+    // Build a set of existing tracks for O(1) lookups
+    var existing = {};
+    for (var i = 0; i < playlistTracks.length; i++) {
+        existing[playlistTracks[i]] = true;
+    }
+
+    var added = false;
+    for (var j = 0; j < files.length; j++) {
+        var f = files[j];
+        if (!existing[f]) {
+            playlistTracks.push(f);
+            existing[f] = true;
+            added = true;
+        }
+    }
+
+    if (added) {
+        updateAllLists();
     }
 }
 
