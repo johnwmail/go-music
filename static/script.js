@@ -997,15 +997,10 @@ function showTab(id) {
 function getAllMp3Data(data) {
     loading = false;
     markLoading(false);
-    if (data.status === 'ok' && data.files) {
-        for (var i = 0; i < data.files.length; i++) {
-            if (inPlaylist(data.files[i]) === 0) {
-                playlistTracks.push(data.files[i]);
-            }
-        }
-        updateAllLists();
+    if (data && data.status === 'ok' && data.files) {
+        addFilesToPlaylist(data.files);
     } else {
-        alert('Failed to add files: ' + (data.message || 'Unknown error'));
+        alert('Failed to add files: ' + (data && data.message ? data.message : 'Unknown error'));
     }
 }
 
@@ -1013,16 +1008,34 @@ function getAllMp3Data(data) {
 function getAllMp3InDirData(data) {
     loading = false;
     markLoading(false);
-
     if (data && data.status === 'ok' && data.files) {
-        for (var i = 0; i < data.files.length; i++) {
-            if (inPlaylist(data.files[i]) === 0) {
-                playlistTracks.push(data.files[i]);
-            }
-        }
-        updateAllLists();
+        addFilesToPlaylist(data.files);
     } else {
         console.error('Failed to add files from dir:', data && data.message);
+    }
+}
+
+// Add a list of file paths to the playlist, avoiding duplicates and updating the UI once.
+function addFilesToPlaylist(files) {
+    if (!files || !files.length) return;
+    // Build a set of existing tracks for O(1) lookups
+    var existing = {};
+    for (var i = 0; i < playlistTracks.length; i++) {
+        existing[playlistTracks[i]] = true;
+    }
+
+    var added = false;
+    for (var j = 0; j < files.length; j++) {
+        var f = files[j];
+        if (!existing[f]) {
+            playlistTracks.push(f);
+            existing[f] = true;
+            added = true;
+        }
+    }
+
+    if (added) {
+        updateAllLists();
     }
 }
 
