@@ -1060,7 +1060,6 @@ function showToast(message) {
 // Add all songs from a directory to playlist
 async function addDirectoryToPlaylist(dirIndex) {
     var dirPath = browserCurDir + browserDirs[dirIndex];
-    console.log('[debug] addDirectoryToPlaylist called, dirIndex=', dirIndex, 'dirPath=', dirPath);
     var dirName = browserDirs[dirIndex];
     markLoading('browser');
     const data = await fetchAPI('getAllMp3InDir', JSON.stringify(dirPath));
@@ -1078,7 +1077,6 @@ async function addDirectoryToPlaylist(dirIndex) {
 // Add all songs from current directory to playlist
 async function addCurrentDirToPlaylist() {
     var dirPath = browserCurDir || ''; // Empty string for root/home
-    console.log('[debug] addCurrentDirToPlaylist called, dirPath=', dirPath);
     var dirName = browserCurDir ? browserCurDir.replace(/\/$/, '').split('/').pop() : 'Home';
     markLoading('browser');
     const data = await fetchAPI('getAllMp3InDir', JSON.stringify(dirPath));
