@@ -407,6 +407,17 @@ body {
 	display: block;
 }
 
+/* ===== Hide Search tab (Option A: keep code but hide UI) ===== */
+/* The Search tab is intentionally hidden to simplify the UI while leaving
+   the underlying JS/server endpoints intact for now. This is reversible. */
+#tabSearch {
+	display: none;
+}
+
+#frameSearch {
+	display: none !important;
+}
+
 /* ===== List Items ===== */
 .item-list {
 	display: flex;
