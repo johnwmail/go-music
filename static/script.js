@@ -1011,7 +1011,7 @@ function getAllMp3InDirData(data) {
     if (data && data.status === 'ok' && data.files) {
         addFilesToPlaylist(data.files);
     } else {
-        console.error('Failed to add files from dir:', data && data.message);
+        alert('Failed to add files from directory: ' + (data && data.message ? data.message : 'Unknown error'));
     }
 }
 
