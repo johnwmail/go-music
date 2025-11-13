@@ -17,6 +17,8 @@ var shuffle = false;
 var browserFilterString = '';
 // Monotonic request id for async server-side searchInDir calls.
 var searchInDirRequestId = 0;
+// When true, the browser frame is showing server-side recursive search results
+var searchInDirActive = false;
 
 
 // Helper function to escape HTML to prevent XSS
@@ -480,7 +482,19 @@ function setTrackFromSearch(id, updateSearchPlaylist) {
 }
 
 function updateAllLists() {
-    updateBrowser();
+    // If a server-side searchInDir view is active, re-render that instead of the
+    // local browser view so the user keeps seeing server results until they
+    // explicitly clear the filter or navigate away.
+    // Preserve and re-render the server-side search view when it was the
+    // last validated response from the server (i.e. data.status === 'ok'),
+    // even if the results are empty. This keeps the UI consistent with the
+    // server's authoritative response until the user clears the filter or
+    // navigates away.
+    if (searchInDirActive) {
+        getSearchInDirData({ status: 'ok', matches: searchInDirMatches });
+    } else {
+        updateBrowser();
+    }
     updatePlaylist();
 }
 
@@ -820,6 +834,9 @@ async function browseDirFromBreadCrumbBar(id) {
         dir += browserCurDirs[i] + '/';
     }
     browserFilterString = ''; // Clear filter when navigating
+    // Navigating clears any active server-side search view
+    searchInDirActive = false;
+    searchInDirMatches = [];
     markLoading('browser');
     const data = await fetchAPI('dir', dir);
     getBrowserData(data);
@@ -832,6 +849,9 @@ async function browseDir(id) {
         dir += browserCurDir + browserDirs[id] + '/';
     }
     browserFilterString = ''; // Clear filter when navigating
+    // Navigating clears any active server-side search view
+    searchInDirActive = false;
+    searchInDirMatches = [];
     markLoading('browser');
     const data = await fetchAPI('dir', dir);
     getBrowserData(data);
@@ -840,6 +860,9 @@ async function browseDir(id) {
 
 async function browseDirByStr(str) {
     browserFilterString = ''; // Clear filter when navigating
+    // Navigating clears any active server-side search view
+    searchInDirActive = false;
+    searchInDirMatches = [];
     markLoading('browser');
     const data = await fetchAPI('dir', str + '/');
     getBrowserData(data);
@@ -851,6 +874,9 @@ async function browseDirByStr(str) {
 async function getPlayingDir() {
     if (playingTrack !== '') {
         var path = playingTrack.substr(0, playingTrack.lastIndexOf('/')) + '/';
+        // Viewing the playing track's directory should clear any active server search
+        searchInDirActive = false;
+        searchInDirMatches = [];
         markLoading('browser');
         const data = await fetchAPI('dir', path);
         getBrowserData(data);
@@ -1043,6 +1069,10 @@ function applyBrowserFilter() {
 
 function clearBrowserFilter() {
     browserFilterString = '';
+    // Clearing the filter should also clear any active server-side search view
+    // so the normal browser directory listing is shown.
+    searchInDirActive = false;
+    searchInDirMatches = [];
     updateBrowser();
     // Refocus on the input after clearing
     setTimeout(function () {
@@ -1066,6 +1096,10 @@ function getSearchInDirData(data) {
     }
 
     searchInDirMatches = data.matches || [];
+    // Only mark the server-side search view active after we've validated and
+    // populated the matches to avoid inconsistent state when the server
+    // returns an error or no results.
+    searchInDirActive = true;
     var list = '<div class="item-list">';
 
     // Keep breadcrumb and filter input visible
