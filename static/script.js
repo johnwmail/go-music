@@ -7,19 +7,16 @@ var browserCurDir = '';
 var browserCurDirs = [];
 var browserDirs = [];
 var browserTitles = [];
-var searchDirs = [];
-var searchDirTracks = [];
-var searchplaylistTracks = [];
 var playing = 0;
 var playingTrack = '';
 var lastProgress = -1;
 var tabShowing = 0;
 var loading = false;
-var searchString = '';
-var searchAction = '';
 var shuffledList = [];
 var shuffle = false;
 var browserFilterString = '';
+// Monotonic request id for async server-side searchInDir calls.
+var searchInDirRequestId = 0;
 
 
 // Helper function to escape HTML to prevent XSS
@@ -94,28 +91,7 @@ function getBrowserData(data) {
 }
 
 
-function getSearchTitle(data) {
-    loading = false;
-    markLoading(false);
-    searchDirs = [];
-    searchDirTracks = data.titles || [];
-    updateSearch('title');
-    if (data.status === 'error' && data.message) {
-        alert(data.message);
-    }
-}
 
-
-function getSearchDir(data) {
-    loading = false;
-    markLoading(false);
-    searchDirTracks = [];
-    searchDirs = data.dirs || [];
-    updateSearch('dir');
-    if (data.status === 'error' && data.message) {
-        alert(data.message);
-    }
-}
 
 
 function init() {
@@ -133,7 +109,6 @@ function init() {
     updateProgressBar();
     browseDir();
     updatePlaylist();
-    updateSearch();
     player.onended = function () {
         changeTrack(1);
     }
@@ -163,14 +138,14 @@ function markLoading(tab) {
     var browserLoader = gebi('markLoadBrowser');
     var searchLoader = gebi('markLoadSearch');
     if (tab == false) {
-        browserLoader.classList.remove('visible');
-        searchLoader.classList.remove('visible');
+        if (browserLoader) browserLoader.classList.remove('visible');
+        if (searchLoader) searchLoader.classList.remove('visible');
     } else if (tab == 'browser') {
-        browserLoader.classList.add('visible');
-        searchLoader.classList.remove('visible');
+        if (browserLoader) browserLoader.classList.add('visible');
+        if (searchLoader) searchLoader.classList.remove('visible');
     } else if (tab == 'search') {
-        browserLoader.classList.remove('visible');
-        searchLoader.classList.add('visible');
+        if (browserLoader) browserLoader.classList.remove('visible');
+        if (searchLoader) searchLoader.classList.add('visible');
     }
 }
 
@@ -425,11 +400,6 @@ function changeTrack(dir) {
                 shuffleList(playlistTracks.length);
             }
         }
-        if (playingFrom == 'search') {
-            if (shuffledList.length != searchplaylistTracks.length) {
-                shuffleList(searchplaylistTracks.length);
-            }
-        }
         var ply = shuffledList.indexOf(playing) + dir;
         if (ply > shuffledList.length - 1) {
             ply = 0;
@@ -455,13 +425,6 @@ function changeTrack(dir) {
             playing = playlistTracks.length - 1;
         }
         setTrackFromPlaylist(playing);
-    } else if (playingFrom == 'search') {
-        if (playing > searchplaylistTracks.length - 1) {
-            playing = 0;
-        } else if (playing < 0) {
-            playing = searchplaylistTracks.length - 1;
-        }
-        setTrackFromSearch(playing);
     }
 }
 
@@ -472,16 +435,14 @@ function markPlayingTab(tab) {
     var listMark = gebi('markList');
     var searchMark = gebi('markSearch');
 
-    browserMark.classList.remove('visible');
-    listMark.classList.remove('visible');
-    searchMark.classList.remove('visible');
+    if (browserMark) browserMark.classList.remove('visible');
+    if (listMark) listMark.classList.remove('visible');
+    if (searchMark) searchMark.classList.remove('visible');
 
     if (playingFrom == 'browser') {
-        browserMark.classList.add('visible');
+        if (browserMark) browserMark.classList.add('visible');
     } else if (playingFrom == 'list') {
-        listMark.classList.add('visible');
-    } else if (playingFrom == 'search') {
-        searchMark.classList.add('visible');
+        if (listMark) listMark.classList.add('visible');
     }
 }
 
@@ -514,19 +475,13 @@ function setTrackFromPlaylist(id) {
 
 
 function setTrackFromSearch(id, updateSearchPlaylist) {
-    if (updateSearchPlaylist == true) {
-        searchplaylistTracks = searchDirTracks;
-    }
-    playing = id;
-    markPlayingTab('search');
-    setAndPlayTrack(searchplaylistTracks[id]);
+    // Search UI removed — compatibility stub. Server-side search remains available.
+    return;
 }
-
 
 function updateAllLists() {
     updateBrowser();
     updatePlaylist();
-    updateSearch();
 }
 
 
@@ -705,64 +660,8 @@ function updatePlaylist() {
 
 
 function updateSearch(action) {
-    if (action != undefined) {
-        searchAction = action;
-    }
-    var list = '<div class="item-list">';
-
-    // Search bar
-    list += '<div class="search-bar">';
-    list += '<input class="search-input" value="' + (searchAction == 'clear' ? '' : searchString) + '" id="searchStr" name="searchStr" type="text" placeholder="Enter search term...">';
-    list += '<button class="search-btn" onClick="searchString=gebi(\'searchStr\').value; searchForTitle(searchString); updateSearch(\'search\')">Title</button>';
-    list += '<button class="search-btn" onClick="searchString=gebi(\'searchStr\').value; searchForDir(searchString); updateSearch(\'search\')">Directory</button>';
-    list += '</div>';
-
-    // Info banner
-    var infoText = '';
-    if (searchAction == 'dir') {
-        infoText = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> Directory search: ' + String(searchDirs.length) + ' result' + (searchDirs.length !== 1 ? 's' : '');
-    } else if (searchAction == 'title') {
-        infoText = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> Title search: ' + String(searchDirTracks.length) + ' result' + (searchDirTracks.length !== 1 ? 's' : '');
-    } else if (searchAction == 'search') {
-        infoText = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> Searching...';
-        searchDirs = [];
-        searchDirTracks = [];
-    } else if (searchAction == 'clear') {
-        infoText = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> Enter a search term and choose Title or Directory';
-        searchDirs = [];
-        searchDirTracks = [];
-    } else {
-        infoText = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> Enter a search term and choose Title or Directory';
-    }
-    list += '<div class="info-banner" onClick="updateSearch(\'clear\')">' + infoText + '</div>';
-
-    // Directory results
-    for (var i = 0; i < searchDirs.length; i++) {
-        list += '<div class="list-item directory" onClick="browseDirByStr(searchDirs[' + i + '])">';
-        list += '<div class="item-content">';
-        list += '<div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> ' + escapeHtml(searchDirs[i].split('/').pop()) + '</div>';
-        list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(searchDirs[i])) + '</div>';
-        list += '</div></div>';
-    }
-
-    // Track results
-    var playlistCount;
-    for (var i = 0; i < searchDirTracks.length; i++) {
-        playlistCount = inPlaylist(searchDirTracks[i]);
-        var isPlaying = playingTrack == searchDirTracks[i];
-        list += '<div class="list-item' + (isPlaying ? ' active' : '') + '" onClick="setTrackFromSearch(' + i + ',true)">';
-        list += '<div class="item-content">';
-        list += '<div class="item-title">' + (isPlaying ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> ' : '') + escapeHtml(getTrackTitle(searchDirTracks[i])) + '</div>';
-        list += '<div class="item-subtitle">' + escapeHtml(getTrackDir(searchDirTracks[i])) + '</div>';
-        list += '</div>';
-        list += '<div class="item-action' + (playlistCount > 0 ? ' in-playlist' : '') + '" onClick="event.stopPropagation();' + (playlistCount > 0 ? 'removeSearchTrackFromPlaylist' : 'addTrackFromSearch') + '(' + i + ')">';
-        list += (playlistCount > 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' : '＋');
-        list += '</div></div>';
-    }
-
-    list += '</div>';
-    // lgtm[js/xss] - All user data in list is escaped via escapeHtml() function
-    gebi('frameSearch').innerHTML = list;
+    // Search UI removed. Stub kept for compatibility with older callers.
+    return;
 }
 
 
@@ -784,8 +683,8 @@ function addTrackFromBrowser(id) {
 
 
 function addTrackFromSearch(id) {
-    playlistTracks[playlistTracks.length] = searchDirTracks[id];
-    updateAllLists();
+    // Search UI removed — compatibility no-op.
+    return;
 }
 
 
@@ -878,11 +777,8 @@ function removeBrowserTrackFromPlaylist(id) {
 
 
 function removeSearchTrackFromPlaylist(id) {
-    var index = playlistTracks.lastIndexOf(searchDirTracks[id])
-    if (index > -1) {
-        playlistTracks.splice(index, 1);
-    }
-    updateAllLists();
+    // Search UI removed — compatibility no-op.
+    return;
 }
 
 
@@ -899,16 +795,22 @@ function removeTrack(id) {
 
 
 async function searchForTitle(search) {
+    // Compatibility stub: call server search API but discard UI updates (dedicated Search UI removed).
     markLoading('search');
-    const data = await fetchAPI('searchTitle', search);
-    getSearchTitle(data);
+    try {
+        await fetchAPI('searchTitle', search);
+    } finally {
+        markLoading(false);
+    }
 }
-
 
 async function searchForDir(search) {
     markLoading('search');
-    const data = await fetchAPI('searchDir', search);
-    getSearchDir(data);
+    try {
+        await fetchAPI('searchDir', search);
+    } finally {
+        markLoading(false);
+    }
 }
 
 
@@ -970,24 +872,23 @@ function showTab(id) {
     } else {
         tabShowing = id;
 
-        // Remove all active states
-        gebi('frameBrowser').classList.remove('active');
-        gebi('framePlaylist').classList.remove('active');
-        gebi('frameSearch').classList.remove('active');
-        gebi('tabBrowser').classList.remove('active');
-        gebi('tabPlaylist').classList.remove('active');
-        gebi('tabSearch').classList.remove('active');
+        // Remove all active states (guarded)
+        var fBrowser = gebi('frameBrowser');
+        var fPlaylist = gebi('framePlaylist');
+        var tBrowser = gebi('tabBrowser');
+        var tPlaylist = gebi('tabPlaylist');
+        if (fBrowser) fBrowser.classList.remove('active');
+        if (fPlaylist) fPlaylist.classList.remove('active');
+        if (tBrowser) tBrowser.classList.remove('active');
+        if (tPlaylist) tPlaylist.classList.remove('active');
 
         // Add active state to selected tab
         if (id == 1) {
-            gebi('frameBrowser').classList.add('active');
-            gebi('tabBrowser').classList.add('active');
+            if (fBrowser) fBrowser.classList.add('active');
+            if (tBrowser) tBrowser.classList.add('active');
         } else if (id == 2) {
-            gebi('framePlaylist').classList.add('active');
-            gebi('tabPlaylist').classList.add('active');
-        } else if (id == 3) {
-            gebi('frameSearch').classList.add('active');
-            gebi('tabSearch').classList.add('active');
+            if (fPlaylist) fPlaylist.classList.add('active');
+            if (tPlaylist) tPlaylist.classList.add('active');
         }
     }
 }
@@ -1109,46 +1010,34 @@ function applyBrowserFilter() {
     var input = gebi('browserFilterInput');
     if (input) {
         browserFilterString = input.value;
-
-        // If filter is empty, just update the browser view
+        // If filter is empty, just update the browser view and skip server call
         if (!browserFilterString) {
             updateBrowser();
             setTimeout(function () { input.focus(); }, 0);
             return;
         }
 
-        // Try local (current directory) matches first
-        var filterLower = browserFilterString.toLowerCase();
-        var localMatches = 0;
-        for (var i = 0; i < browserDirs.length; i++) {
-            if (browserDirs[i].toLowerCase().indexOf(filterLower) >= 0) localMatches++;
-        }
-        for (var i = 0; i < browserTitles.length; i++) {
-            // match against filename and displayed title
-            var titleText = getTrackTitle(browserTitles[i]).toLowerCase();
-            if (browserTitles[i].toLowerCase().indexOf(filterLower) >= 0 || titleText.indexOf(filterLower) >= 0) localMatches++;
-        }
+        // Always show local filtered results immediately for speed
+        updateBrowser();
+        setTimeout(function () { input.focus(); }, 0);
 
-        if (localMatches > 0) {
-            // Show local filtered results
-            updateBrowser();
-            // Keep focus on input
+        // Then always kick off an async server-side recursive search (it will replace the UI when it returns).
+        // Use a monotonic request id so stale responses are ignored.
+        var payload = JSON.stringify({ dir: browserCurDir || '', term: browserFilterString, limit: 200 });
+        var myReq = ++searchInDirRequestId;
+        markLoading('browser');
+        fetchAPI('searchInDir', payload).then(function (data) {
+            // ignore stale responses
+            if (myReq !== searchInDirRequestId) return;
+            markLoading(false);
+            getSearchInDirData(data);
             setTimeout(function () { input.focus(); }, 0);
-        } else {
-            // No local matches — perform a recursive directory search on the server
-            // Keep results in Browser tab (don't switch tabs)
-            var payload = JSON.stringify({ dir: browserCurDir || '', term: browserFilterString, limit: 200 });
-            markLoading('browser');
-            fetchAPI('searchInDir', payload).then(function (data) {
-                markLoading(false);
-                getSearchInDirData(data);
-                setTimeout(function () { input.focus(); }, 0);
-            }).catch(function (err) {
-                markLoading(false);
-                console.error('searchInDir error', err);
-                alert('Search failed: ' + err.message);
-            });
-        }
+        }).catch(function (err) {
+            if (myReq !== searchInDirRequestId) return;
+            markLoading(false);
+            console.error('searchInDir error', err);
+            alert('Search failed: ' + err.message);
+        });
     }
 }
 
@@ -1195,7 +1084,12 @@ function getSearchInDirData(data) {
     }
     list += '</div></div>';
 
-    list += '<div class="info-banner">' + String(searchInDirMatches.length) + ' result' + (searchInDirMatches.length !== 1 ? 's' : '') + ' found for "' + escapeHtml(browserFilterString) + '"</div>';
+    // Info banner with optional Add-All button placed inside the banner (aligned right)
+    list += '<div class="info-banner">' + String(searchInDirMatches.length) + ' result' + (searchInDirMatches.length !== 1 ? 's' : '') + ' found for "' + escapeHtml(browserFilterString) + '"';
+    if (searchInDirMatches.length > 0) {
+        list += '<button class="info-banner-add" onClick="event.stopPropagation();addAllSearchInDirToPlaylist()" title="Add all search results to playlist">＋</button>';
+    }
+    list += '</div>';
 
     for (var i = 0; i < searchInDirMatches.length; i++) {
         var m = searchInDirMatches[i];
@@ -1215,6 +1109,21 @@ function getSearchInDirData(data) {
 
     list += '</div>';
     gebi('frameBrowser').innerHTML = list;
+}
+
+// Add all currently-loaded server-side searchInDir matches to the playlist.
+function addAllSearchInDirToPlaylist() {
+    if (!searchInDirMatches || !searchInDirMatches.length) return;
+    var files = [];
+    for (var i = 0; i < searchInDirMatches.length; i++) {
+        if (searchInDirMatches[i] && searchInDirMatches[i].path) files.push(searchInDirMatches[i].path);
+    }
+    if (!files.length) return;
+    addFilesToPlaylist(files);
+    // Re-render search results so per-item in-playlist state updates
+    getSearchInDirData({ status: 'ok', matches: searchInDirMatches });
+    // Show toast notification
+    showToast({ svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>', text: String(files.length) + ' tracks added to playlist' });
 }
 
 function setTrackFromSearchInDir(i) {

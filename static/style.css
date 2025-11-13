@@ -254,15 +254,20 @@ body {
 	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
 }
 
-.control-btn:hover {
-	background: #2196f3;
-	color: #ffffff;
-	transform: scale(1.1);
-	box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-}
 
-.control-btn:active {
-	transform: scale(0.95);
+/* Only apply hover styles on devices that actually support hover (prevents touch devices
+   from sticking hover-state after taps). */
+@media (hover: hover) and (pointer: fine) {
+	.control-btn:hover {
+		background: #2196f3;
+		color: #ffffff;
+		transform: scale(1.1);
+		box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+	}
+
+	.control-btn:active {
+		transform: scale(0.95);
+	}
 }
 
 .btn-shuffle.active {
@@ -407,16 +412,7 @@ body {
 	display: block;
 }
 
-/* ===== Hide Search tab (Option A: keep code but hide UI) ===== */
-/* The Search tab is intentionally hidden to simplify the UI while leaving
-   the underlying JS/server endpoints intact for now. This is reversible. */
-#tabSearch {
-	display: none;
-}
-
-#frameSearch {
-	display: none !important;
-}
+/* Search tab removed from UI. Related JS/server endpoints remain available. */
 
 /* ===== List Items ===== */
 .item-list {
@@ -680,58 +676,7 @@ body {
 	}
 }
 
-/* ===== Search Bar ===== */
-.search-bar {
-	display: flex;
-	gap: 0.5rem;
-	margin-bottom: 1rem;
-}
-
-.search-input {
-	flex: 1;
-	background: rgba(255, 255, 255, 0.9);
-	border: 2px solid rgba(33, 150, 243, 0.3);
-	color: #0d47a1;
-	padding: 0.75rem 1rem;
-	border-radius: 0.5rem;
-	font-size: 1rem;
-	transition: all 0.2s ease;
-}
-
-.search-input::placeholder {
-	color: #64b5f6;
-}
-
-.search-input:focus {
-	outline: none;
-	border-color: #2196f3;
-	background: #ffffff;
-	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
-}
-
-.search-btn {
-	background: #2196f3;
-	color: #ffffff;
-	border: none;
-	padding: 0.75rem 1.5rem;
-	border-radius: 0.5rem;
-	cursor: pointer;
-	font-weight: 600;
-	font-size: 0.875rem;
-	transition: all 0.2s ease;
-	white-space: nowrap;
-	box-shadow: 0 2px 6px rgba(33, 150, 243, 0.25);
-}
-
-.search-btn:hover {
-	background: #1976d2;
-	transform: translateY(-2px);
-	box-shadow: 0 4px 10px rgba(33, 150, 243, 0.35);
-}
-
-.search-btn:active {
-	transform: translateY(0);
-}
+/* Dedicated Search styles removed with Search tab UI */
 
 /* ===== Info Banner ===== */
 .info-banner {
@@ -750,6 +695,36 @@ body {
 .info-banner:hover {
 	background: rgba(33, 150, 243, 0.2);
 	border-color: rgba(33, 150, 243, 0.4);
+}
+
+/* Add-All button inside info banners (server search results) */
+.info-banner {
+	position: relative;
+}
+
+.info-banner-add {
+	position: absolute;
+	right: 0.75rem;
+	top: 50%;
+	transform: translateY(-50%);
+	background: transparent;
+	border: none;
+	color: #1976d2;
+	font-size: 1.25rem;
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.info-banner-add:hover {
+	background: rgba(33, 150, 243, 0.12);
+	color: #0b63b7;
+	transform: translateY(-50%) scale(1.06);
 }
 
 /* ===== Playlist Info Banner ===== */

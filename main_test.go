@@ -679,3 +679,65 @@ func TestHandleSearchDir(t *testing.T) {
 		})
 	}
 }
+
+// TestHandleSearchInDir tests the recursive searchInDir API which should
+// return matches found under the provided directory (including nested folders).
+func TestHandleSearchInDir(t *testing.T) {
+	// Create temporary test directory with nested structure
+	tmpDir, err := os.MkdirTemp("", "gomusic-test-*")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	origLocalMusicDir := localMusicDir
+	defer func() {
+		localMusicDir = origLocalMusicDir
+	}()
+
+	// Nested directories and files. Some filenames include the term "test"
+	os.MkdirAll(filepath.Join(tmpDir, "Artist1", "Album1"), 0755)
+	os.MkdirAll(filepath.Join(tmpDir, "Artist2", "Album2"), 0755)
+	os.WriteFile(filepath.Join(tmpDir, "Artist1", "Test Song 1.mp3"), []byte("test"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "Artist1", "Album1", "track_test.mp3"), []byte("test"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "Artist2", "Album2", "other.mp3"), []byte("test"), 0644)
+
+	localMusicDir = tmpDir
+
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Build the inner data object (JSON string) expected by handleSearchInDir
+	dataObj := map[string]interface{}{"dir": "", "term": "test", "limit": 100}
+	dataBytes, _ := json.Marshal(dataObj)
+
+	reqBody := map[string]string{
+		"function": "searchInDir",
+		"data":     string(dataBytes),
+	}
+	jsonData, _ := json.Marshal(reqBody)
+	c.Request = httptest.NewRequest("POST", "/api", bytes.NewBuffer(jsonData))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handleRequest(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", response["status"])
+
+	// matches should be present and include the two files that contain "test"
+	matches, ok := response["matches"].([]interface{})
+	assert.True(t, ok, "matches field should be an array")
+	assert.Equal(t, 2, len(matches), "Should find 2 matching files containing 'test'")
+
+	// verify structure of returned match objects
+	for _, m := range matches {
+		mm := m.(map[string]interface{})
+		assert.Contains(t, mm, "path")
+		assert.Contains(t, mm, "title")
+		assert.Contains(t, mm, "dir")
+	}
+}
