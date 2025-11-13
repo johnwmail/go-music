@@ -684,10 +684,7 @@ function updatePlaylist() {
         list += '<div class="info-banner">Playlist is empty - Add tracks from Browser or Search</div>';
     }
 
-    // Add all button
-    list += '<div class="list-item directory" onClick="showFolderSelectDialog()">';
-    list += '<div class="item-content"><div class="item-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg> Add All MP3 Files to Playlist</div></div>';
-    list += '</div>';
+    // (Removed) Add all MP3 files button — functionality available via directory '+' controls in Browser
 
     // Playlist tracks
     for (var i = 0; i < playlistTracks.length; i++) {
