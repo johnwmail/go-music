@@ -664,15 +664,15 @@ body {
 /* Responsive adjustments */
 @media (max-width: 768px) {
 	.breadcrumb-filter-container {
-		flex-wrap: wrap;
+		gap: 0.5rem;
 	}
 
 	.browser-filter-input {
-		width: 150px;
+		width: 120px;
 	}
 
 	.browser-filter-input:focus {
-		width: 100%;
+		width: 140px;
 	}
 }
 
