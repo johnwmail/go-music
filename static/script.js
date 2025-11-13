@@ -485,7 +485,12 @@ function updateAllLists() {
     // If a server-side searchInDir view is active, re-render that instead of the
     // local browser view so the user keeps seeing server results until they
     // explicitly clear the filter or navigate away.
-    if (searchInDirActive && searchInDirMatches && searchInDirMatches.length >= 0) {
+    // Preserve and re-render the server-side search view when it was the
+    // last validated response from the server (i.e. data.status === 'ok'),
+    // even if the results are empty. This keeps the UI consistent with the
+    // server's authoritative response until the user clears the filter or
+    // navigates away.
+    if (searchInDirActive) {
         getSearchInDirData({ status: 'ok', matches: searchInDirMatches });
     } else {
         updateBrowser();
@@ -1084,9 +1089,6 @@ var searchInDirMatches = [];
 function getSearchInDirData(data) {
     loading = false;
     markLoading(false);
-    // Mark that we're now showing server-side searchInDir results so other
-    // UI updates (e.g. updateAllLists) can preserve this view.
-    searchInDirActive = true;
     if (!data || data.status !== 'ok') {
         var msg = (data && data.message) ? data.message : 'No results';
         gebi('frameBrowser').innerHTML = '<div class="item-list"><div class="info-banner">' + escapeHtml(msg) + '</div></div>';
@@ -1094,6 +1096,10 @@ function getSearchInDirData(data) {
     }
 
     searchInDirMatches = data.matches || [];
+    // Only mark the server-side search view active after we've validated and
+    // populated the matches to avoid inconsistent state when the server
+    // returns an error or no results.
+    searchInDirActive = true;
     var list = '<div class="item-list">';
 
     // Keep breadcrumb and filter input visible
