@@ -126,7 +126,12 @@ function init() {
     player.onloadedmetadata = function () {
         updateProgressBar();
     }
+
+    // no fixed footer padding adjustment needed for inline footer
 }
+
+// Measure the fixed footer and set CSS var + content padding so it never overlays content.
+// no adjustFooterPadding required for inline footer
 
 async function loadVersion() {
     const data = await fetchAPI('version', '');

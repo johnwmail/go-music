@@ -14,6 +14,8 @@ body {
 	color: #1565c0;
 	height: 100%;
 	min-height: 100vh;
+	/* Allow the page (html/body) to scroll normally. The footer is fixed
+	   and JS will add bottom padding to `.content` so it isn't overlapped. */
 	overflow-y: auto;
 	-webkit-touch-callout: none;
 	-webkit-user-select: none;
@@ -28,6 +30,14 @@ html {
 	height: 100%;
 }
 
+:root {
+	/* heights used to compute available space for scrolling frames */
+	--top-controls-height: 260px;
+	/* estimate: player + tabs area */
+	--footer-height: 36px;
+	/* one-line footer height */
+}
+
 .hideout {
 	position: absolute;
 	left: 0;
@@ -35,88 +45,7 @@ html {
 	visibility: hidden;
 }
 
-/* ===== Header ===== */
-.header {
-	background: rgba(255, 255, 255, 0.95);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	padding: 1rem;
-	border-bottom: 2px solid #2196f3;
-	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
-}
-
-/* ----- Temporary: hide header -----
-   The header is hidden via this override so the UI shows only the player/content.
-   If you want to restore the header later, remove this rule or set it to `display: block`.
-*/
-.header {
-	display: none !important;
-}
-
-.header-content {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.header-title {
-	font-size: 1.5rem;
-	font-weight: 700;
-	color: #1976d2;
-	margin: 0;
-}
-
-.header-link {
-	color: #1976d2;
-	text-decoration: none !important;
-	transition: color 0.3s ease;
-	display: flex;
-	align-items: center;
-}
-
-.header-link:hover {
-	color: #2196f3;
-	text-decoration: none !important;
-}
-
-.header-link:focus,
-.header-link:active,
-.header-link:visited {
-	text-decoration: none !important;
-}
-
-.header-version-link {
-	text-decoration: none !important;
-	transition: transform 0.2s ease;
-	display: inline-block;
-}
-
-.header-version-link:hover {
-	transform: translateY(-2px);
-	text-decoration: none !important;
-}
-
-.header-version-link:focus,
-.header-version-link:active,
-.header-version-link:visited {
-	text-decoration: none !important;
-}
-
-.header-version-link:hover .header-version {
-	background: rgba(33, 150, 243, 0.25);
-	border-color: rgba(33, 150, 243, 0.5);
-}
-
-.header-version {
-	font-size: 0.875rem;
-	color: #1565c0;
-	background: rgba(33, 150, 243, 0.15);
-	padding: 0.25rem 0.75rem;
-	border-radius: 1rem;
-	border: 1px solid rgba(33, 150, 243, 0.3);
-	transition: all 0.3s ease;
-	cursor: pointer;
-}
+/* header removed */
 
 /* ===== Player Section ===== */
 .player-section {
@@ -392,15 +321,18 @@ html {
 /* ===== Content Area ===== */
 .content {
 	position: relative;
-	/* allow content to size naturally so the page can scroll as a whole */
 	min-height: 0;
+	/* allow flex child to shrink properly */
+	/* page-level scrolling happens here */
+	/* allow content to size normally inside the page — the page (body)
+	   will handle scrolling. JS adjusts padding-bottom to keep footer
+	   from covering content. */
 	overflow: visible;
 }
 
 .content-frame {
 	display: none;
-	/* let frames expand naturally and participate in page flow so the
-	   browser page (html/body) handles scrolling */
+	/* frames are allowed to scroll internally if active */
 	height: auto;
 	overflow-y: visible;
 	overflow-x: hidden;
@@ -428,19 +360,123 @@ html {
 
 .content-frame.active {
 	display: block;
-	/* allow the active frame to scroll independently while the page
-	   itself remains scrollable; the calc subtracts the header/player/tabs
-	   area so the frame fits into the viewport. Adjust the 260px value
-	   if your top controls are taller or shorter. */
-	max-height: calc(100vh - 260px);
+	/* allow the active frame to scroll independently if needed. With the
+	   flex layout the main `.content` will handle page scrolling, while
+	   the active frame can still scroll internally when long. */
+	max-height: none;
 	overflow-y: auto;
+	/* small bottom padding so internal scroll thumb doesn't touch footer */
+	padding-bottom: 8px;
 }
 
 /* Tune the internal frame height on narrow screens (smaller top area) */
 @media (max-width: 480px) {
-	.content-frame.active {
-		max-height: calc(100vh - 220px);
+	:root {
+		--top-controls-height: 220px;
 	}
+
+	.content-frame.active {
+		max-height: calc(100vh - var(--top-controls-height) - var(--footer-height));
+	}
+}
+
+/* ===== Footer (one-line) ===== */
+.footer-inline {
+	/* inline one-line footer that flows with the content */
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 12px;
+	background: rgba(255, 255, 255, 0.9);
+	border-top: 1px solid rgba(33, 150, 243, 0.08);
+	box-shadow: 0 -2px 6px rgba(33, 150, 243, 0.03);
+	font-size: 0.875rem;
+	color: #6b7785;
+	margin-top: 8px;
+}
+
+.footer-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	/* muted/dark icon with subtle title color to match design */
+	color: #333;
+	font-weight: 600;
+}
+
+.footer-title {
+	font-size: 0.95rem;
+	color: #6b7785;
+	font-weight: 600;
+}
+
+/* GitHub icon sizing/coloring for footer */
+.footer-github-icon {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	fill: #333;
+}
+
+/* Make anchors inside the footer look like part of the footer (no ugly underlines) */
+.footer-inline a {
+	color: inherit;
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+}
+
+.footer-inline a:hover {
+	/* keep a subtle hover for version but avoid underlining the left repo link
+	   (we'll specifically allow underline only on the version link below) */
+	opacity: 0.95;
+}
+
+/* Specific rule for the version link: remove underlines completely and
+   provide a small left margin for the version value so it never runs
+   into the label. We keep a hover opacity effect but no underline. */
+.footer-version .footer-version-link,
+.footer-version .footer-version-link:link,
+.footer-version .footer-version-link:visited,
+.footer-version .footer-version-link:hover,
+.footer-version .footer-version-link:active,
+.footer-version .footer-version-link:focus {
+	color: #9099a8;
+	font-weight: 500;
+	text-decoration: none;
+	padding: 2px 4px;
+}
+
+/* give the inner version span a small left margin so "Version:" and the
+   version value are separated even if whitespace collapses in some layouts */
+.footer-version .footer-version-link #appVersion {
+	margin-left: 0.35rem;
+}
+
+/* Slight hover affordance for the version link */
+.footer-version a:hover {
+	opacity: 0.95;
+	text-decoration: underline;
+}
+
+/* Ensure the left-side repo link never shows an underline (including hover/focus)
+   — more specific than .footer-inline a:hover so it wins over general rules. */
+.footer-left,
+.footer-left:link,
+.footer-left:visited,
+.footer-left:hover,
+.footer-left:active,
+.footer-left:focus {
+	text-decoration: none;
+}
+
+/* Prevent the title span itself from gaining decoration */
+.footer-left .footer-title {
+	text-decoration: none;
+}
+
+.footer-version {
+	color: #9099a8;
 }
 
 /* Search tab removed from UI. Related JS/server endpoints remain available. */
@@ -450,6 +486,8 @@ html {
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
+	/* ensure the item-list has a reasonable minimum height on small screens */
+	min-height: 220px;
 }
 
 .list-item {
