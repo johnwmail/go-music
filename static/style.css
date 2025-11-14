@@ -12,13 +12,20 @@ body {
 	background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
 	background-attachment: fixed;
 	color: #1565c0;
+	height: 100%;
 	min-height: 100vh;
+	overflow-y: auto;
 	-webkit-touch-callout: none;
 	-webkit-user-select: none;
 	user-select: none;
 	-webkit-overflow-scrolling: touch;
 	-webkit-transform: translate3d(0, 0, 0);
 	transform: translate3d(0, 0, 0);
+}
+
+/* Ensure html/body can grow and the page itself is scrollable (not inner frames) */
+html {
+	height: 100%;
 }
 
 .hideout {
@@ -36,6 +43,14 @@ body {
 	padding: 1rem;
 	border-bottom: 2px solid #2196f3;
 	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+}
+
+/* ----- Temporary: hide header -----
+   The header is hidden via this override so the UI shows only the player/content.
+   If you want to restore the header later, remove this rule or set it to `display: block`.
+*/
+.header {
+	display: none !important;
 }
 
 .header-content {
@@ -377,14 +392,17 @@ body {
 /* ===== Content Area ===== */
 .content {
 	position: relative;
-	min-height: 400px;
-	overflow: hidden;
+	/* allow content to size naturally so the page can scroll as a whole */
+	min-height: 0;
+	overflow: visible;
 }
 
 .content-frame {
 	display: none;
-	height: 100%;
-	overflow-y: auto;
+	/* let frames expand naturally and participate in page flow so the
+	   browser page (html/body) handles scrolling */
+	height: auto;
+	overflow-y: visible;
 	overflow-x: hidden;
 	padding: 1rem;
 	scrollbar-width: thin;
@@ -410,6 +428,19 @@ body {
 
 .content-frame.active {
 	display: block;
+	/* allow the active frame to scroll independently while the page
+	   itself remains scrollable; the calc subtracts the header/player/tabs
+	   area so the frame fits into the viewport. Adjust the 260px value
+	   if your top controls are taller or shorter. */
+	max-height: calc(100vh - 260px);
+	overflow-y: auto;
+}
+
+/* Tune the internal frame height on narrow screens (smaller top area) */
+@media (max-width: 480px) {
+	.content-frame.active {
+		max-height: calc(100vh - 220px);
+	}
 }
 
 /* Search tab removed from UI. Related JS/server endpoints remain available. */
