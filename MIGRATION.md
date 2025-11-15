@@ -81,14 +81,12 @@ All functions that previously called `loadFromServer()` now use `fetchAPI()`:   
 
  - `echoReqHtml()` — HTML wrapper used to execute parent callbacks from an iframe.
  - `ea()` — JS helper that encoded arrays into a string for embedding in HTML callback arguments.
- - `setVersion()` (frontend) — compatibility wrapper; version rendering is handled directly by `loadVersion()` now.
 
  In Go code, leftover helpers used only for the iframe flow were also removed.
 
  ## Notable updated handlers (backend)
 
  - `handleRequest` — accepts JSON (`Content-Type: application/json`) and falls back to form parsing if needed. It dispatches on the request `function` field and returns JSON.
- - `handleVersion` — returns `{status: "ok", "version": "..."}`.
  - `handleDirRequest`, `handleGetAllMp3`, `handleGetAllMp3InDir`, `handleGetAllDirs`, `handleGetAllMp3InDirs`, `handleSearchTitle`, `handleSearchDir` — all return consistent JSON shapes.
 
  The backend changes are focused on returning proper JSON and preserving behaviors (directory listing, searches, presigned URLs for S3, or local-file routing).
@@ -96,7 +94,6 @@ All functions that previously called `loadFromServer()` now use `fetchAPI()`:   
  ## Frontend changes (static/script.js)
 
  - New `fetchAPI()` async wrapper that sends JSON and parses JSON responses.
- - `loadVersion()` is async and updates the version DOM element directly.
  - UI callbacks (`getBrowserData`, `getSearchTitle`, `getSearchDir`, etc.) now accept JSON objects and handle them without iframe callbacks.
 
  ## Backward compatibility
@@ -116,7 +113,6 @@ All functions that previously called `loadFromServer()` now use `fetchAPI()`:   
  Run these locally before/after deployment:
 
  - [x] Directory browsing (browse directories and see file lists)
- - [x] Version loads and displays in the UI
  - [x] Search by title (results show expected matches)
  - [x] Search by directory (results show expected matches)
  - [x] Get all MP3(s) and per-directory MP3 listings

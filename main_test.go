@@ -60,55 +60,6 @@ func TestIsAudioFile(t *testing.T) {
 
 // (removed TestEa and its test-local ea implementation because the helper was removed from production code)
 
-// TestHandleVersion tests the version endpoint
-func TestHandleVersion(t *testing.T) {
-	// Save original values
-	origVersion := Version
-	origCommitHash := CommitHash
-	origBuildTime := BuildTime
-
-	defer func() {
-		Version = origVersion
-		CommitHash = origCommitHash
-		BuildTime = origBuildTime
-	}()
-
-	tests := []struct {
-		name    string
-		version string
-	}{
-		{
-			name:    "Dev version",
-			version: "dev",
-		},
-		{
-			name:    "Release version",
-			version: "v1.2.3",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			Version = tt.version
-
-			gin.SetMode(gin.TestMode)
-			w := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(w)
-
-			handleVersion(c)
-
-			assert.Equal(t, http.StatusOK, w.Code)
-
-			// Verify JSON response
-			var response map[string]interface{}
-			err := json.Unmarshal(w.Body.Bytes(), &response)
-			assert.NoError(t, err)
-			assert.Equal(t, "ok", response["status"])
-			assert.Equal(t, tt.version, response["version"])
-		})
-	}
-}
-
 // TestUsingLocal tests the backend detection
 func TestUsingLocal(t *testing.T) {
 	// Save original
@@ -355,14 +306,6 @@ func TestHandleRequest(t *testing.T) {
 		checkFields    []string
 	}{
 		{
-			name:           "Get version",
-			function:       "version",
-			data:           "",
-			wantStatus:     http.StatusOK,
-			wantJSONStatus: "ok",
-			checkFields:    []string{"version"},
-		},
-		{
 			name:           "List root directory",
 			function:       "dir",
 			data:           "",
@@ -426,39 +369,6 @@ func TestHandleRequest(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestHandleRequestFormData tests backwards compatibility with form data
-func TestHandleRequestFormData(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "gomusic-test-*")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	origLocalMusicDir := localMusicDir
-	defer func() {
-		localMusicDir = origLocalMusicDir
-	}()
-	localMusicDir = tmpDir
-
-	gin.SetMode(gin.TestMode)
-
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	// Create form data request (legacy iframe style)
-	formData := "dffunc=version&dfdata="
-	c.Request = httptest.NewRequest("POST", "/api", strings.NewReader(formData))
-	c.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	handleRequest(c)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	var response map[string]interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "ok", response["status"])
-	assert.Contains(t, response, "version")
 }
 
 // TestHandleDirRequest tests directory listing

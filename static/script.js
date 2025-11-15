@@ -83,10 +83,6 @@ function getBrowserData(data) {
         browserDirs = data.dirs || [];
         browserTitles = data.files || [];
         updateBrowser();
-        // Load version after initial directory is loaded (only on first load)
-        if (browserCurDir === '' && gebi('appVersion').textContent === 'Loading ...') {
-            loadVersion();
-        }
     } else {
         alert(data.message || 'Error loading directory');
     }
@@ -127,14 +123,6 @@ function init() {
         updateProgressBar();
     }
 }
-
-async function loadVersion() {
-    const data = await fetchAPI('version', '');
-    if (data.status === 'ok' && data.version) {
-        gebi('appVersion').textContent = data.version;
-    }
-}
-
 
 function markLoading(tab) {
     var browserLoader = gebi('markLoadBrowser');

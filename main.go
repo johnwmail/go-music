@@ -293,16 +293,9 @@ func handleRequest(c *gin.Context) {
 		handleGetAllDirs(c)
 	case "getAllMp3InDirs":
 		handleGetAllMp3InDirs(c, req.Data)
-	case "version":
-		handleVersion(c)
 	default:
 		c.JSON(http.StatusOK, gin.H{"status": "error", "message": "Unknown function"})
 	}
-}
-
-func handleVersion(c *gin.Context) {
-	log.Printf("Returning version: %s", Version)
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "version": Version})
 }
 
 // --- S3 Helper Functions ---
