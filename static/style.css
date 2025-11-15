@@ -52,7 +52,8 @@ html {
 	background: rgba(255, 255, 255, 0.9);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
-	padding: 1.5rem 1rem;
+	/* reduced padding for a more compact header/footer layout */
+	padding: 2px 8px;
 	border-bottom: 1px solid rgba(33, 150, 243, 0.2);
 	box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
 }
@@ -386,36 +387,24 @@ html {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 8px 12px;
+	/* make footer compact and sit flush with content */
+	padding: 2px;
 	background: rgba(255, 255, 255, 0.9);
-	border-top: 1px solid rgba(33, 150, 243, 0.08);
-	box-shadow: 0 -2px 6px rgba(33, 150, 243, 0.03);
+	border-top: 0 none;
+	box-shadow: none;
 	font-size: 0.875rem;
 	color: #6b7785;
-	margin-top: 8px;
+	margin: 0;
+	flex-wrap: wrap;
 }
 
 .footer-left {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	/* muted/dark icon with subtle title color to match design */
-	color: #333;
-	font-weight: 600;
-}
-
-.footer-title {
-	font-size: 0.95rem;
-	color: #6b7785;
-	font-weight: 600;
-}
-
-/* GitHub icon sizing/coloring for footer */
-.footer-github-icon {
-	width: 18px;
-	height: 18px;
-	flex-shrink: 0;
-	fill: #333;
+	/* blue icon/title to match page accents */
+	color: #1976d2;
+	font-weight: 700;
 }
 
 /* Make anchors inside the footer look like part of the footer (no ugly underlines) */
@@ -488,6 +477,19 @@ html {
 	gap: 0.5rem;
 	/* ensure the item-list has a reasonable minimum height on small screens */
 	min-height: 220px;
+}
+
+/* Draw a subtle 1px separator at the bottom edge of the main content area so
+   the footer can be flush while still visually separated. Using a pseudo
+   element on the parent avoids the footer having its own border which can be
+   affected by stacking or background blending on mobile. */
+main.content::after {
+	content: '';
+	display: block;
+	height: 1px;
+	width: 100%;
+	background: rgba(33, 150, 243, 0.06);
+	margin-top: 0;
 }
 
 .list-item {
