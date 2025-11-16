@@ -35,8 +35,8 @@ jobs:
           else
             VERSION="sha-${GITHUB_SHA::7}"
           fi
-          echo "Replacing __VERSION__ with ${VERSION} in static/index.html"
-          sed -i "s/__VERSION__/${VERSION}/g" static/index.html
+          #echo "Replacing __VERSION__ with ${VERSION} in static/index.html"
+          #sed -i "s/__VERSION__/${VERSION}/g" static/index.html
 
       - name: Set up QEMU (for multi-arch builds)
         uses: docker/setup-qemu-action@v3
