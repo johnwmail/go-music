@@ -144,7 +144,7 @@ All functions that previously called `loadFromServer()` now use `fetchAPI()`:   
  Once the new fetch-based flow is stable, consider removing:
 
  1. Form-data fallback parsing in `handleRequest()`.
- 2. Any leftover iframe/form DOM elements in `static/index.html`.
+ 2. Any leftover iframe/form DOM elements in `templates/index.html`.
  3. Any migration-only comments or shim helpers in the codebase.
 
  ## Notes about `setVersion()`

@@ -651,3 +651,18 @@ func TestHandleSearchInDir(t *testing.T) {
 		assert.Contains(t, mm, "dir")
 	}
 }
+
+// TestIndexServesVersion ensures the server-side template injects the build Version
+// into the served HTML for the index page.
+func TestIndexServesVersion(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/", nil)
+	// Use the global router created in init()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, Version, "index page should contain Version string")
+}

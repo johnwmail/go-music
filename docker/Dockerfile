@@ -22,6 +22,7 @@ WORKDIR /app
 
 # copy static assets from build stage (they live at /build/static inside the build stage)
 COPY --from=build /build/static /app/static
+COPY --from=build /build/templates /app/templates
 # copy the compiled binary placed at /build/go-music in the build stage
 COPY --from=build /build/go-music /app/go-music
 
