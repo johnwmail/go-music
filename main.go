@@ -100,16 +100,7 @@ func main() {
 	// TestMain.
 	// Initialize storage backend (do this in main so tests can control
 	// the storage backend through MUSIC_DIR before the app starts).
-	if err := ensureStorage(); err != nil {
-		log.Fatalf("Storage configuration error: %v", err)
-	}
-	if localMusicDir == "" {
-		if err := initS3(); err != nil {
-			log.Fatalf("S3 init error: %v", err)
-		}
-	} else {
-		log.Printf("Using local music directory: %s", localMusicDir)
-	}
+	initStorage()
 
 	r = newRouter()
 
@@ -579,11 +570,25 @@ func usingLocal() bool { return localMusicDir != "" }
 // ensureStorage checks whether a storage backend is configured and returns
 // an error if not (leaving the caller to fatal/log accordingly). This is
 // testable (unlike calling log.Fatalf in init()).
-func ensureStorage() error {
-	if localMusicDir != "" || s3Bucket != "" {
-		return nil
+// storageConfigured returns true if either a local music directory or S3 is configured.
+func storageConfigured() bool {
+	return localMusicDir != "" || s3Bucket != ""
+}
+
+// initStorage performs the storage backend initialization (either local or S3).
+// It fatals when no backend is configured. Keeping an explicit init function
+// means the work happens in main() (not in init()), which is better for tests.
+func initStorage() {
+	if localMusicDir != "" {
+		log.Printf("Using local music directory: %s", localMusicDir)
+		return
 	}
-	return fmt.Errorf("either MUSIC_DIR or BUCKET environment variable must be set")
+	if s3Bucket == "" {
+		log.Fatalf("Either MUSIC_DIR or BUCKET environment variable must be set")
+	}
+	if err := initS3(); err != nil {
+		log.Fatalf("S3 init error: %v", err)
+	}
 }
 
 // newRouter builds the Gin engine and registers all routes. This is separated
