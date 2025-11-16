@@ -82,6 +82,7 @@ jobs:
           mkdir -p lambda-artifacts
           mv -f bootstrap lambda-artifacts/bootstrap
           cp -r static lambda-artifacts/static
+          cp -r templates lambda-artifacts/templates
           ls -l lambda-artifacts
 
       - name: Configure AWS credentials

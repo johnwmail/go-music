@@ -105,6 +105,7 @@ jobs:
               # Copy the binary and rename it to generic 'go-music'
               cp "$file" "$pkg_dir/go-music"
               cp -r ../static "$pkg_dir/"
+              cp -r ../templates "$pkg_dir/"
               tar -czf "${file}.tar.gz" "$pkg_dir"
               rm -rf "$pkg_dir"
               echo "Created archive: ${file}.tar.gz"
