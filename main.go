@@ -47,6 +47,11 @@ var (
 
 var s3Client *s3.Client
 
+// isLambda will be set early in init() when the app detects it is running in
+// AWS Lambda (by checking AWS_LAMBDA_FUNCTION_NAME). Use this flag to gate
+// Lambda-specific setup (e.g., gin adapter).
+var isLambda bool
+
 // Build info variables, set via -ldflags at build time
 var (
 	Version    = "vDev"
@@ -59,12 +64,45 @@ func init() {
 	log.Printf("Gin cold start")
 	log.Printf("Build info: Version=%s, CommitHash=%s, BuildTime=%s", Version, CommitHash, BuildTime)
 
+	// Early detect Lambda environment so we can avoid Lambda-only setup in
+	// the rest of the application when running locally or during tests.
+	if _, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME"); ok {
+		isLambda = true
+	}
+
 	// Check if MUSIC_DIR is set from environment (including tests)
 	if envDir := os.Getenv("MUSIC_DIR"); envDir != "" && localMusicDir == "" {
 		localMusicDir = envDir
 	}
 
-	// Initialize storage backend
+	// Defer storage initialization to main so tests can control the storage
+	// backend (using MUSIC_DIR) without S3 being initialized during package init.
+
+	// Router initialization moved to main() to avoid heavy work in package init
+	// which runs during tests and imports. Tests should call newRouter() in
+	// TestMain to initialize the router explicitly.
+}
+
+// Handler is the function that AWS Lambda will invoke.
+func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	if ginLambda == nil {
+		return events.APIGatewayV2HTTPResponse{StatusCode: http.StatusInternalServerError, Body: "not initialized for Lambda"}, fmt.Errorf("lambda adapter not initialized")
+	}
+	return ginLambda.ProxyWithContext(ctx, req)
+}
+
+// main is the entry point for local execution or Lambda deployment.
+func main() {
+	// A more reliable way to check if we are in a Lambda environment.
+	// The AWS_LAMBDA_FUNCTION_NAME variable is always set by the Lambda runtime.
+	// Initialize router on startup (moved out of init to avoid running heavy
+	// setup during package initialization). Tests should initialize router in
+	// TestMain.
+	// Initialize storage backend (do this in main so tests can control
+	// the storage backend through MUSIC_DIR before the app starts).
+	if err := validateStorage(); err != nil {
+		log.Fatalf("Storage configuration error: %v", err)
+	}
 	if localMusicDir == "" {
 		if err := initS3(); err != nil {
 			log.Fatalf("S3 init error: %v", err)
@@ -73,43 +111,9 @@ func init() {
 		log.Printf("Using local music directory: %s", localMusicDir)
 	}
 
-	r = gin.Default()
-	r.Static("/static", "./static")
-	// Parse index.html once and render as a Go template so we can inject build info
-	// like the Version string dynamically from the Go build.
-	indexTmpl = template.Must(template.ParseFiles("./templates/index.html"))
-	r.GET("/", func(c *gin.Context) {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		data := struct{ Version string }{Version: Version}
-		if err := indexTmpl.Execute(c.Writer, data); err != nil {
-			log.Printf("failed to render index template: %v", err)
-			c.String(http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
-	})
-	r.GET("/favicon.ico", func(c *gin.Context) {
-		c.File("./static/favicon.ico")
-	})
-	r.Use(ResponseLogger())
-	r.POST("/api", handleRequest)
-	r.GET("/audio/*path", audioProxyHandler)
-	r.GET("/localdisk/*path", localDiskHandler)
-	r.NoRoute(func(c *gin.Context) {
-		c.String(http.StatusNotFound, "Not found")
-	})
-	ginLambda = ginadapter.NewV2(r)
-}
+	r = newRouter()
 
-// Handler is the function that AWS Lambda will invoke.
-func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	return ginLambda.ProxyWithContext(ctx, req)
-}
-
-// main is the entry point for local execution or Lambda deployment.
-func main() {
-	// A more reliable way to check if we are in a Lambda environment.
-	// The AWS_LAMBDA_FUNCTION_NAME variable is always set by the Lambda runtime.
-	if _, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME"); ok {
+	if isLambda {
 		lambda.Start(Handler)
 	} else {
 		log.Println("Running local server on :8080")
@@ -567,6 +571,67 @@ func isAudioFile(filename string) bool {
 // They intentionally preserve existing semantics (e.g. directory name formats, root inclusion).
 
 func usingLocal() bool { return localMusicDir != "" }
+
+// storageConfigured returns true if either a local music directory or S3 is configured.
+func storageConfigured() bool {
+	return localMusicDir != "" || s3Bucket != ""
+}
+
+// validateStorage checks whether a storage backend is configured and returns
+// an error if not (leaving the caller to fatal/log accordingly). This is
+// testable (unlike calling log.Fatalf in init()).
+func validateStorage() error {
+	if storageConfigured() {
+		return nil
+	}
+	return fmt.Errorf("either MUSIC_DIR or BUCKET environment variable must be set")
+}
+
+// newRouter builds the Gin engine and registers all routes. This is separated
+// out so tests and main() can call it explicitly instead of relying on init.
+func newRouter() *gin.Engine {
+	r := gin.Default()
+
+	// Serve static assets
+	r.Static("/static", "./static")
+
+	// Parse and cache index template (server-side rendering).  We log so that
+	// a missing template is visible in logs before any panic; template.Must
+	// will still panic on parse failure which is often desirable in production,
+	// but the log makes debugging easier.
+	log.Printf("Parsing template: ./templates/index.html")
+	indexTmpl = template.Must(template.ParseFiles("./templates/index.html"))
+
+	r.GET("/", func(c *gin.Context) {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		data := struct{ Version string }{Version: Version}
+		if err := indexTmpl.Execute(c.Writer, data); err != nil {
+			log.Printf("failed to render index template: %v", err)
+			c.String(http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+	})
+
+	r.GET("/favicon.ico", func(c *gin.Context) {
+		c.File("./static/favicon.ico")
+	})
+
+	r.Use(ResponseLogger())
+	r.POST("/api", handleRequest)
+	r.GET("/audio/*path", audioProxyHandler)
+	r.GET("/localdisk/*path", localDiskHandler)
+	r.NoRoute(func(c *gin.Context) {
+		c.String(http.StatusNotFound, "Not found")
+	})
+
+	// Setup AWS Lambda adapter only when running under Lambda. Local
+	// execution (or tests) should not enable the Lambda adapter.
+	if isLambda {
+		ginLambda = ginadapter.NewV2(r)
+	}
+
+	return r
+}
 
 func listDir(prefix string) ([]string, []string, error) {
 	if usingLocal() {

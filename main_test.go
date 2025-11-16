@@ -23,6 +23,24 @@ func init() {
 	}
 }
 
+// TestMain initializes the router before running tests. This mirrors production
+// startup where newRouter() is called in main(), but allows tests to run with
+// a fully initialized router without relying on init().
+func TestMain(m *testing.M) {
+	// Set Gin to test mode for cleaner log output
+	gin.SetMode(gin.TestMode)
+
+	// Ensure localMusicDir is set by the test init (MUSIC_DIR env var)
+	if localMusicDir == "" {
+		localMusicDir = os.Getenv("MUSIC_DIR")
+	}
+
+	// Build the router explicitly for tests
+	r = newRouter()
+
+	os.Exit(m.Run())
+}
+
 // TestIsAudioFile tests the audio file extension detection
 func TestIsAudioFile(t *testing.T) {
 	tests := []struct {
@@ -665,4 +683,29 @@ func TestIndexServesVersion(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
 	assert.Contains(t, body, Version, "index page should contain Version string")
+}
+
+// TestStorageConfigured validates storage detection and validation helpers.
+func TestStorageConfigured(t *testing.T) {
+	// Backup and restore global state
+	origLocal := localMusicDir
+	origBucket := s3Bucket
+	defer func() { localMusicDir = origLocal; s3Bucket = origBucket }()
+
+	// Neither set: storageConfigured() false, validateStorage() returns error
+	localMusicDir = ""
+	s3Bucket = ""
+	assert.False(t, storageConfigured())
+	assert.Error(t, validateStorage())
+
+	// localMusicDir set: configured
+	localMusicDir = "/tmp"
+	assert.True(t, storageConfigured())
+	assert.NoError(t, validateStorage())
+
+	// Clear localMusicDir, set BUCKET: configured
+	localMusicDir = ""
+	s3Bucket = "test-bucket"
+	assert.True(t, storageConfigured())
+	assert.NoError(t, validateStorage())
 }

@@ -341,6 +341,10 @@ The tests cover:
 
 The CI pipeline in `.github/workflows/test.yml` enforces code quality checks and runs the full test suite automatically.
 
+Note: The unit tests are designed to run without AWS/S3 credentials. The test harness sets `MUSIC_DIR` automatically (see `main_test.go`) to a temporary directory to avoid S3 initialization — you can also set `MUSIC_DIR` yourself if you want tests to run against a specific local folder.
+
+If you'd like to exercise S3 integration in tests, set `BUCKET` and `AWS_REGION` in your environment. The application will call `initS3()` in `main()` only when a local music directory is not provided.
+
 ### Project Structure
 
 ```
