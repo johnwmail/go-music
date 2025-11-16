@@ -78,7 +78,7 @@ func init() {
 	r.Static("/static", "./static")
 	// Parse index.html once and render as a Go template so we can inject build info
 	// like the Version string dynamically from the Go build.
-	indexTmpl = template.Must(template.ParseFiles("./static/index.html"))
+	indexTmpl = template.Must(template.ParseFiles("./templates/index.html"))
 	r.GET("/", func(c *gin.Context) {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		data := struct{ Version string }{Version: Version}
