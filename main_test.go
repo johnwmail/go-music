@@ -692,20 +692,17 @@ func TestStorageConfigured(t *testing.T) {
 	origBucket := s3Bucket
 	defer func() { localMusicDir = origLocal; s3Bucket = origBucket }()
 
-	// Neither set: storageConfigured() false, validateStorage() returns error
+	// Neither set: validateStorage should return error
 	localMusicDir = ""
 	s3Bucket = ""
-	assert.False(t, storageConfigured())
-	assert.Error(t, validateStorage())
+	assert.Error(t, ensureStorage())
 
-	// localMusicDir set: configured
+	// localMusicDir set: validateStorage should succeed
 	localMusicDir = "/tmp"
-	assert.True(t, storageConfigured())
-	assert.NoError(t, validateStorage())
+	assert.NoError(t, ensureStorage())
 
-	// Clear localMusicDir, set BUCKET: configured
+	// Clear localMusicDir, set BUCKET: validateStorage should succeed
 	localMusicDir = ""
 	s3Bucket = "test-bucket"
-	assert.True(t, storageConfigured())
-	assert.NoError(t, validateStorage())
+	assert.NoError(t, ensureStorage())
 }

@@ -100,7 +100,7 @@ func main() {
 	// TestMain.
 	// Initialize storage backend (do this in main so tests can control
 	// the storage backend through MUSIC_DIR before the app starts).
-	if err := validateStorage(); err != nil {
+	if err := ensureStorage(); err != nil {
 		log.Fatalf("Storage configuration error: %v", err)
 	}
 	if localMusicDir == "" {
@@ -573,15 +573,14 @@ func isAudioFile(filename string) bool {
 func usingLocal() bool { return localMusicDir != "" }
 
 // storageConfigured returns true if either a local music directory or S3 is configured.
-func storageConfigured() bool {
-	return localMusicDir != "" || s3Bucket != ""
-}
-
 // validateStorage checks whether a storage backend is configured and returns
 // an error if not (leaving the caller to fatal/log accordingly). This is
 // testable (unlike calling log.Fatalf in init()).
-func validateStorage() error {
-	if storageConfigured() {
+// ensureStorage checks whether a storage backend is configured and returns
+// an error if not (leaving the caller to fatal/log accordingly). This is
+// testable (unlike calling log.Fatalf in init()).
+func ensureStorage() error {
+	if localMusicDir != "" || s3Bucket != "" {
 		return nil
 	}
 	return fmt.Errorf("either MUSIC_DIR or BUCKET environment variable must be set")
