@@ -85,6 +85,7 @@ func init() {
 		if err := indexTmpl.Execute(c.Writer, data); err != nil {
 			log.Printf("failed to render index template: %v", err)
 			c.String(http.StatusInternalServerError, "Internal Server Error")
+			return
 		}
 	})
 	r.GET("/favicon.ico", func(c *gin.Context) {
