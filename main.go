@@ -79,13 +79,14 @@ func init() {
 	// like the Version string dynamically from the Go build.
 	indexTmpl = template.Must(template.ParseFiles("./templates/index.html"))
 	r.GET("/", func(c *gin.Context) {
-		c.Header("Content-Type", "text/html; charset=utf-8")
 		data := struct{ Version string }{Version: Version}
-		if err := indexTmpl.Execute(c.Writer, data); err != nil {
+		var buf bytes.Buffer
+		if err := indexTmpl.Execute(&buf, data); err != nil {
 			log.Printf("failed to render index template: %v", err)
 			c.String(http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", buf.Bytes())
 	})
 	r.GET("/favicon.ico", func(c *gin.Context) {
 		c.File("./static/favicon.ico")
