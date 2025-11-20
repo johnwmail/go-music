@@ -44,6 +44,7 @@ var (
 	s3Region = os.Getenv("AWS_REGION") // This is now optional
 	s3Prefix = os.Getenv("S3_PREFIX")
 )
+var localMusicDir = os.Getenv("MUSIC_DIR") // e.g. "/mp3"
 
 var s3Client *s3.Client
 
@@ -70,10 +71,13 @@ func init() {
 		isLambda = true
 	}
 
-	// Check if MUSIC_DIR is set from environment (including tests)
-	if envDir := os.Getenv("MUSIC_DIR"); envDir != "" && localMusicDir == "" {
-		localMusicDir = envDir
-	}
+	// NOTE: localMusicDir is initialized at package-level using os.Getenv("MUSIC_DIR").
+	// Historically we attempted to re-read MUSIC_DIR here to pick up environment
+	// changes during package init (like tests setting the env var). That pattern
+	// is fragile and redundant with tests that explicitly set `localMusicDir` in
+	// TestMain. To keep initialization simple and deterministic, we rely on the
+	// package-level var initialization and tests that set `localMusicDir` in
+	// `TestMain` as needed.
 
 	// Defer storage initialization to main so tests can control the storage
 	// backend (using MUSIC_DIR) without S3 being initialized during package init.
@@ -758,10 +762,6 @@ func s3ListAllDirs() ([]string, error) {
 	}
 	return allDirs, nil
 }
-
-// --- Local Disk Helper Functions ---
-
-var localMusicDir = os.Getenv("MUSIC_DIR") // e.g. "/mp3"
 
 func localList(prefix string) ([]string, []string, error) {
 	var dirs, files []string
