@@ -118,11 +118,12 @@ The app switches to Lambda mode when `AWS_LAMBDA_FUNCTION_NAME` is present. The 
      -o bootstrap .
    ```
 
-2. Package with static assets:
+2. Package with static and templates assets:
    ```bash
    mkdir -p lambda-artifacts
    mv bootstrap lambda-artifacts/
    cp -r static lambda-artifacts/
+   cp -r templates lambda-artifacts/
    cd lambda-artifacts && zip -r ../deployment.zip . && cd ..
    ```
 

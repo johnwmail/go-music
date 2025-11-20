@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -24,6 +25,7 @@ import (
 
 var ginLambda *ginadapter.GinLambdaV2
 var r *gin.Engine
+var indexTmpl *template.Template
 
 const (
 	CHARSET           = "UTF-8"
@@ -47,9 +49,9 @@ var s3Client *s3.Client
 
 // Build info variables, set via -ldflags at build time
 var (
-	Version    = "dev"
-	BuildTime  = "unknown"
-	CommitHash = "none"
+	Version    = "vDev"
+	BuildTime  = "timeless"
+	CommitHash = "sha-unknown"
 )
 
 // init function runs before main and sets up the Gin router.
@@ -73,8 +75,18 @@ func init() {
 
 	r = gin.Default()
 	r.Static("/static", "./static")
+	// Parse index.html once and render as a Go template so we can inject build info
+	// like the Version string dynamically from the Go build.
+	indexTmpl = template.Must(template.ParseFiles("./templates/index.html"))
 	r.GET("/", func(c *gin.Context) {
-		c.File("./static/index.html")
+		data := struct{ Version string }{Version: Version}
+		var buf bytes.Buffer
+		if err := indexTmpl.Execute(&buf, data); err != nil {
+			log.Printf("failed to render index template: %v", err)
+			c.String(http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", buf.Bytes())
 	})
 	r.GET("/favicon.ico", func(c *gin.Context) {
 		c.File("./static/favicon.ico")

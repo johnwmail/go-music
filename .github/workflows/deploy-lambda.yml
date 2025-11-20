@@ -69,8 +69,8 @@ jobs:
       - name: Build Lambda bootstrap
         run: |
           # Replace __VERSION__ placeholder in index.html for cache busting
-          echo "Replacing __VERSION__ with ${VERSION} in static/index.html"
-          sed -i "s/__VERSION__/${VERSION}/g" static/index.html
+          #echo "Replacing __VERSION__ with ${VERSION} in static/index.html"
+          #sed -i "s/__VERSION__/${VERSION}/g" static/index.html
 
           go build \
             -ldflags "-X main.BuildTime=$(date --utc +%Y-%m-%dT%H:%M:%SZ) -X main.CommitHash=${{ github.sha }} -X main.Version=${VERSION}" \
@@ -82,6 +82,7 @@ jobs:
           mkdir -p lambda-artifacts
           mv -f bootstrap lambda-artifacts/bootstrap
           cp -r static lambda-artifacts/static
+          cp -r templates lambda-artifacts/templates
           ls -l lambda-artifacts
 
       - name: Configure AWS credentials
