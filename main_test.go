@@ -686,23 +686,6 @@ func TestIndexServesVersion(t *testing.T) {
 }
 
 // TestStorageConfigured validates storage detection and validation helpers.
-func TestStorageConfigured(t *testing.T) {
-	// Backup and restore global state
-	origLocal := localMusicDir
-	origBucket := s3Bucket
-	defer func() { localMusicDir = origLocal; s3Bucket = origBucket }()
-
-	// Neither set: storageConfigured returns false
-	localMusicDir = ""
-	s3Bucket = ""
-	assert.False(t, storageConfigured())
-
-	// localMusicDir set: storageConfigured returns true
-	localMusicDir = "/tmp"
-	assert.True(t, storageConfigured())
-
-	// Clear localMusicDir, set BUCKET: storageConfigured returns true
-	localMusicDir = ""
-	s3Bucket = "test-bucket"
-	assert.True(t, storageConfigured())
-}
+// TestStorageConfigured removed: no longer testing `storageConfigured()` helper.
+// Storage behavior is validated through end-to-end tests (API handlers, list
+// functions) rather than a dedicated function.
