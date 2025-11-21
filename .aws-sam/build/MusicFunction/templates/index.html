@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Go Music Player</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="theme-color" content="#2196f3">
+	<link rel="stylesheet" href="/static/style.css?v={{ .Version }}">
+</head>
+
+<body onload="init()">
+	<audio class="hideout" id="player" preload="none" tabindex="0"></audio>
+
+	<!-- Header -->
+	<header class="header">
+		<div class="header-content">
+			<h1 class="header-title">
+				<a href="https://github.com/johnwmail/go-music" target="_blank" rel="noopener noreferrer" class="header-link">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+						style="vertical-align: middle; margin-right: 8px;">
+						<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+					</svg>
+					Go Music
+				</a>
+			</h1>
+			<a href="https://github.com/johnwmail/go-music/releases" target="_blank" rel="noopener noreferrer"
+				class="header-version-link">
+				<div class="header-version">
+					<span class="header-version-icon" aria-hidden="true">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+							<path
+								d="M8 0C3.58 0 0 3.58 0 8a7.96 7.96 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.1 0 0 .67-.21 2.2.82a7.55 7.55 0 0 1 2-.27c.68 0 1.37.09 2 .27 1.52-1.03 2.2-.82 2.2-.82.44 1.09.16 1.9.08 2.1.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A7.96 7.96 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+						</svg>
+					</span>
+					<span id="appVersion">{{ .Version }}</span>
+				</div>
+			</a>
+		</div>
+	</header>
+
+	<!-- Player Controls -->
+	<div class="player-section">
+		<div class="track-info" id="trackName" onClick="getPlayingDir()">
+			<div class="track-title">No track loaded</div>
+			<div class="track-path"></div>
+		</div>
+
+		<div class="time-info">
+			<span class="time-current" id="trackCurrentTime">00:00:00</span>
+			<span class="time-remaining" id="trackRemaining">00:00:00</span>
+			<span class="time-duration" id="trackDuration">00:00:00</span>
+		</div>
+
+		<div class="progress-bar" id="bar"></div>
+
+		<div class="controls">
+			<button class="control-btn btn-prev" onClick="changeTrack(-1);player.play()" title="Previous">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+				</svg>
+			</button>
+			<button class="control-btn btn-play" onClick="(player.paused?player.play():player.pause())" id="buttonPlay"
+				title="Play/Pause">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z" />
+				</svg>
+			</button>
+			<button class="control-btn btn-stop" onClick="playerStop()" id="buttonStop" title="Stop">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M6 6h12v12H6z" />
+				</svg>
+			</button>
+			<button class="control-btn btn-next" onClick="changeTrack(1);player.play()" title="Next">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+				</svg>
+			</button>
+			<button class="control-btn btn-shuffle" id="shuffle" onClick="shuffleToggle()" title="Shuffle">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+					stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 16v5h-5" />
+					<path d="M16 3h5v5" />
+					<path d="M3 18 C 6 18 9 15 12 12 C 15 9 18 6 21 6" />
+					<path d="M21 18 C 18 18 15 15 12 12 C 9 9 6 6 3 6" />
+				</svg>
+			</button>
+		</div>
+	</div>
+
+	<!-- Navigation Tabs -->
+	<nav class="tabs">
+		<button class="tab" id="tabBrowser" onClick="showTab(1)">
+			<span class="tab-icon" id="markBrowser">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z" />
+				</svg>
+			</span>
+			<span class="tab-loader" id="markLoadBrowser">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<circle cx="12" cy="12" r="8" />
+				</svg>
+			</span>
+			<span class="tab-label">Browser</span>
+		</button>
+		<button class="tab" id="tabPlaylist" onClick="showTab(2)">
+			<span class="tab-icon" id="markList">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z" />
+				</svg>
+			</span>
+			<span class="tab-label">Playlist</span>
+		</button>
+	</nav>
+
+	<!-- Content Frames -->
+	<main class="content">
+		<div id="frameBrowser" class="content-frame"></div>
+		<div id="framePlaylist" class="content-frame"></div>
+
+	</main>
+
+	<script src="/static/script.js?v={{ .Version }}"></script>
+</body>
+
+</html>
