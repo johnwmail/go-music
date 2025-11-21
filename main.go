@@ -553,13 +553,6 @@ func isAudioFile(filename string) bool {
 
 func usingLocal() bool { return localMusicDir != "" }
 
-// validateStorage checks whether a storage backend is configured and returns
-// an error if not (leaving the caller to fatal/log accordingly). This is
-// testable (unlike calling log.Fatalf in init()).
-// ensureStorage checks whether a storage backend is configured and returns
-// an error if not (leaving the caller to fatal/log accordingly). This is
-// testable (unlike calling log.Fatalf in init()).
-
 // initStorage performs the storage backend initialization (either local or S3).
 // It fatals when no backend is configured. Keeping an explicit init function
 // means the work happens in main() (not in init()), which is better for tests.
