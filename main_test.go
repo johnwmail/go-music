@@ -74,10 +74,6 @@ func TestIsAudioFile(t *testing.T) {
 	}
 }
 
-// TestEa tests the JavaScript array encoding function
-
-// (removed TestEa and its test-local ea implementation because the helper was removed from production code)
-
 // TestUsingLocal tests the backend detection
 func TestUsingLocal(t *testing.T) {
 	// Save original
@@ -684,8 +680,3 @@ func TestIndexServesVersion(t *testing.T) {
 	body := w.Body.String()
 	assert.Contains(t, body, Version, "index page should contain Version string")
 }
-
-// TestStorageConfigured validates storage detection and validation helpers.
-// TestStorageConfigured removed: no longer testing `storageConfigured()` helper.
-// Storage behavior is validated through end-to-end tests (API handlers, list
-// functions) rather than a dedicated function.

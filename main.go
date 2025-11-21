@@ -70,21 +70,6 @@ func init() {
 	if _, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME"); ok {
 		isLambda = true
 	}
-
-	// NOTE: localMusicDir is initialized at package-level using os.Getenv("MUSIC_DIR").
-	// Historically we attempted to re-read MUSIC_DIR here to pick up environment
-	// changes during package init (like tests setting the env var). That pattern
-	// is fragile and redundant with tests that explicitly set `localMusicDir` in
-	// TestMain. To keep initialization simple and deterministic, we rely on the
-	// package-level var initialization and tests that set `localMusicDir` in
-	// `TestMain` as needed.
-
-	// Defer storage initialization to main so tests can control the storage
-	// backend (using MUSIC_DIR) without S3 being initialized during package init.
-
-	// Router initialization moved to main() to avoid heavy work in package init
-	// which runs during tests and imports. Tests should call newRouter() in
-	// TestMain to initialize the router explicitly.
 }
 
 // Handler is the function that AWS Lambda will invoke.
