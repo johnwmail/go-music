@@ -82,15 +82,13 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 
 // main is the entry point for local execution or Lambda deployment.
 func main() {
-	// A more reliable way to check if we are in a Lambda environment.
-	// The AWS_LAMBDA_FUNCTION_NAME variable is always set by the Lambda runtime.
-	// Initialize router on startup (moved out of init to avoid running heavy
-	// setup during package initialization). Tests should initialize router in
-	// TestMain.
 	// Initialize storage backend (do this in main so tests can control
 	// the storage backend through MUSIC_DIR before the app starts).
 	initStorage()
 
+	// Initialize router on startup (moved out of init to avoid running heavy
+	// setup during package initialization). Tests should initialize router in
+	// TestMain.
 	r = newRouter()
 
 	if isLambda {
