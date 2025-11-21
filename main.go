@@ -584,7 +584,7 @@ func newRouter() *gin.Engine {
 	// Serve static assets
 	r.Static("/static", "./static")
 
-	// Parse and cache index template (server-side rendering).  We log so that
+	// Parse and cache index template (server-side rendering). We log so that
 	// a missing template is visible in logs before any panic; template.Must
 	// will still panic on parse failure which is often desirable in production,
 	// but the log makes debugging easier.
