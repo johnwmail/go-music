@@ -232,10 +232,6 @@ func s3GetPresignedUrl(key string) (string, error) {
 
 // initS3 initializes the S3 client from environment variables.
 func initS3() error {
-	if s3Bucket == "" {
-		return fmt.Errorf("BUCKET environment variable must be set")
-	}
-
 	var cfgOpts []func(*config.LoadOptions) error
 	// If the AWS_REGION is explicitly set, use it.
 	if s3Region != "" {
@@ -255,6 +251,11 @@ func initS3() error {
 	}
 
 	log.Printf("S3 client configured for region: %s", cfg.Region)
+	log.Printf("S3 bucket set: %s", s3Bucket)
+
+	if s3Prefix != "" {
+		log.Printf("S3 prefix set: %s", s3Prefix)
+	}
 
 	if s3Prefix != "" && !strings.HasSuffix(s3Prefix, "/") {
 		s3Prefix += "/"
