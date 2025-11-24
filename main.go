@@ -92,6 +92,7 @@ func main() {
 	r = newRouter()
 
 	if isLambda {
+		ginLambda = ginadapter.NewV2(r)
 		lambda.Start(Handler)
 	} else {
 		log.Println("Running local server on :8080")
@@ -603,12 +604,6 @@ func newRouter() *gin.Engine {
 	r.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusNotFound, "Not found")
 	})
-
-	// Setup AWS Lambda adapter only when running under Lambda. Local
-	// execution (or tests) should not enable the Lambda adapter.
-	if isLambda {
-		ginLambda = ginadapter.NewV2(r)
-	}
 
 	return r
 }
