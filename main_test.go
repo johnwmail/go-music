@@ -30,11 +30,6 @@ func TestMain(m *testing.M) {
 	// Set Gin to test mode for cleaner log output
 	gin.SetMode(gin.TestMode)
 
-	// Ensure localMusicDir is set by the test init (MUSIC_DIR env var)
-	if localMusicDir == "" {
-		localMusicDir = os.Getenv("MUSIC_DIR")
-	}
-
 	// Build the router explicitly for tests
 	r = newRouter()
 
