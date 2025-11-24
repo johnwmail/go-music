@@ -37,4 +37,4 @@ bootstrap
 mp3/
 music/
 *.log
-
+.aws-sam/
