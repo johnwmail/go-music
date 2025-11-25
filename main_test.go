@@ -23,6 +23,19 @@ func init() {
 	}
 }
 
+// TestMain initializes the router before running tests. This mirrors production
+// startup where newRouter() is called in main(), but allows tests to run with
+// a fully initialized router without relying on init().
+func TestMain(m *testing.M) {
+	// Set Gin to test mode for cleaner log output
+	gin.SetMode(gin.TestMode)
+
+	// Build the router explicitly for tests
+	r = newRouter()
+
+	os.Exit(m.Run())
+}
+
 // TestIsAudioFile tests the audio file extension detection
 func TestIsAudioFile(t *testing.T) {
 	tests := []struct {
@@ -55,10 +68,6 @@ func TestIsAudioFile(t *testing.T) {
 		})
 	}
 }
-
-// TestEa tests the JavaScript array encoding function
-
-// (removed TestEa and its test-local ea implementation because the helper was removed from production code)
 
 // TestUsingLocal tests the backend detection
 func TestUsingLocal(t *testing.T) {
